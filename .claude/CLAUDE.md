@@ -1,7 +1,7 @@
 # react-native-hotswap
 
-Swaps the native side of a running React Native app without reinstalling it — Kotlin on
-Android, Swift and C++ on the iOS simulator. Save the file, the code is replaced in place,
+Swaps the native side of a running React Native app without reinstalling it — Kotlin and C++
+on Android, Swift and C++ on the iOS simulator. Save the file, the code is replaced in place,
 the app keeps its state.
 
 A JVMTI agent rides inside the app; a watcher on the dev machine compiles and ships each
@@ -29,14 +29,15 @@ safety check mechanical, not because the mechanism needs it.
 
 These cost hours to find and none of them are in the documentation:
 
-| Fact                                                        | Consequence                                                                                             |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `Debug.attachJvmtiAgent` rejects any path containing `=`    | every install dir is base64 and ends in `==`, so the agent is reached through a symlink in `filesDir`   |
-| W^X blocks `dlopen` from app data                           | the symlink resolves into the apk lib dir, which keeps the `apk_data_file` label that permits execution |
-| ART does not grant `can_redefine_any_class`                 | capabilities are negotiated against `GetPotentialCapabilities`, never demanded                          |
-| `FindClass` on the agent thread sees only the system loader | app classes are found by walking `GetLoadedClasses`                                                     |
-| Modern AGP maps `.so` straight out of the APK               | the app must set `useLegacyPackaging = true`, or there is no file path to attach                        |
-| The NDK ships `jni.h` but not `jvmti.h`                     | the ART header is vendored in `android/src/main/cpp/vendor/`                                            |
+| Fact                                                        | Consequence                                                                                           |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `Debug.attachJvmtiAgent` rejects any path containing `=`    | every install dir is base64 and ends in `==`, so the agent is reached through a symlink in `filesDir` |
+| A library may never be extracted from the apk               | the symlink points at the apk instead, and the linker reads `archive!/entry`                          |
+| `dlopen` from the app's own data directory is **allowed**   | measured on API 36; the opposite was written here for weeks and was wrong                             |
+| ART does not grant `can_redefine_any_class`                 | capabilities are negotiated against `GetPotentialCapabilities`, never demanded                        |
+| `FindClass` on the agent thread sees only the system loader | app classes are found by walking `GetLoadedClasses`                                                   |
+| Modern AGP maps `.so` straight out of the APK               | the app must set `useLegacyPackaging = true`, or there is no file path to attach                      |
+| The NDK ships `jni.h` but not `jvmti.h`                     | the ART header is vendored in `android/src/main/cpp/vendor/`                                          |
 
 ## State
 
@@ -100,7 +101,22 @@ The reach is the images' data sections, not all of memory. That covers a vtable 
 function pointer built on the heap, which is the honest limit to quote rather than "every
 call site".
 
-Android C++ is still out, and for an unchanged reason: W^X blocks loading a recompiled `.so`.
+**Android C++ swaps too, and is the simpler half.** A freshly compiled `.so` is written into
+the app's own data directory, loaded, and an absolute branch goes over each changed
+function's entry. Because the branch sits at the entry and not at the call sites, one write
+covers a direct call, a PLT entry and a vtable slot at once — and a second swap needs no
+registry, since the symbol table still reports the address being overwritten. Measured:
+`free=10 virtual=1` to `555/777` in 519ms to `42/31337` in 455ms.
+
+The claim that W^X blocked this was wrong, and worth remembering as a method failure rather
+than a fact: the library that failed to load had never been extracted from the apk, so a
+missing file and a refused load were read as one thing. The probe that settled it tried four
+routes — plain `dlopen`, `memfd_create` with `android_dlopen_ext`, anonymous RW-then-RX
+memory, and `mprotect` over existing text. The first one worked.
+
+Sixteen bytes have to belong to the function, and the room is measured on the unstripped
+library the app was built from — the patch's own size would overstate it whenever an edit
+makes a function grow.
 
 Every swap links its dylib under a new name. dyld keys a loaded image on its install name, so
 a second `patch.dylib` came back as the handle of the first and the new file was never mapped

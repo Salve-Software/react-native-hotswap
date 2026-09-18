@@ -86,9 +86,20 @@ Swap the file twice, with different values each time. Both numbers must follow, 
 must not change. A free function that moves while the virtual one stays is the vtable going
 unpatched; a second swap that does not move is the installed-address registry.
 
+The same probe answers for Android, where it is compiled into the library's own
+`CMakeLists.txt` and read with `adb logcat -s Hotswap`. One save must move both platforms
+when both are running, and each line must name the same file:
+
+```
+  ✅ cpp/HotswapProbeImpl.cpp  481ms
+  ✅ cpp/HotswapProbeImpl.cpp  6740ms
+```
+
 Two things the probe itself has to get right, both of which cost a cycle:
 
 - **The driver cannot live in the file being swapped**, or loading the patch runs it a second
   time and the reading is worthless.
 - **Nothing references a probe, so the linker drops it.** It only survives in a static
   library if an Objective-C `+load` pulls the object in, since the app links with `-ObjC`.
+  Android does not have this problem: a shared library keeps every object it was given, so a
+  plain static initialiser runs.

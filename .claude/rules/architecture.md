@@ -9,6 +9,7 @@ dev machine                          device
 cli/  watch → gradle → d8        ─→  agent.cpp        → ART redefines the classes
 cli/  watch → generate → xcode   ─→  HotswapLoader.mm → dyld loads, swift replaces
 cli/  watch → include  → xcode   ─→  HotswapLoader.mm → rebind + patch vtables
+cli/  watch → ndk      → clang   ─→  native_swap.cpp  → dlopen, branch at each entry
 metro.cjs  starts the watcher
 ```
 
@@ -75,11 +76,14 @@ works and the guarantee is weaker.
   status. Anything richer belongs on the CLI side.
 - **Capabilities are asked for, never assumed.** ART grants a different set per version;
   `GetPotentialCapabilities` decides what to request.
-- **C++ is an iOS mechanism only.** On the simulator a dylib loads freely, so a changed
-  translation unit is compiled and its addresses taken over. On Android, loading a recompiled
-  `.so` needs root and an ELF rebinder, and that has not changed.
+- **C++ swaps on both, by different means.** Android loads a `.so` and writes a branch at the
+  original's entry, which covers every call path in one write. iOS cannot write over its
+  text, so it rebinds symbol slots and scans data sections for vtable pointers.
 - **A call is reached two ways, and only one names a symbol.** Free functions and non-virtual
-  methods go through a symbol slot and are rebound; a virtual call reads the vtable, which
-  holds the address directly. Anything that swaps C++ has to do both.
+  methods go through a symbol slot; a virtual call reads the vtable, which holds the address
+  directly. Patching at the callee's entry sidesteps the distinction, which is why the
+  Android side is the shorter of the two.
+- **The room for a redirect is measured on what is running**, never on the patch. An edit
+  that grows a function would otherwise claim space the installed code does not have.
 - **Config resolves against the module root**, never `process.cwd()` — Metro runs out of the
   example app.
