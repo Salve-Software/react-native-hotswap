@@ -1,4 +1,5 @@
 import type { Outcome, Platform, SwapConfig, Swapper } from './types/index.js';
+import { existsSync } from 'node:fs';
 import { relative } from 'node:path';
 import {
   Agent,
@@ -35,6 +36,14 @@ export class Hotswap {
   }
 
   async swap(path: string): Promise<boolean> {
+    // A deleted file is an ordinary edit, not a failure: whatever it declared is still
+    // loaded and nothing that compiles refers to it any more.
+    if (!existsSync(path)) {
+      console.log(`  ⌫ ${relative(this.config.root, path)}  removed`);
+
+      return false;
+    }
+
     return HEADERS.some((end) => path.endsWith(end))
       ? this.swapDependents(path)
       : this.swapOne(path);
