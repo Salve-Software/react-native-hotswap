@@ -28,9 +28,9 @@ split the decision from the effect rather than reaching for a mock — that is h
 ## `__tests__/` next to the code
 
 ```
-cli/src/library/
-├── resolve-class-name.js
-└── __tests__/resolve-class-name.test.js
+src/classes/swapper/kotlin-swapper/library/
+├── resolve-class-name.ts
+└── __tests__/resolve-class-name.test.ts
 ```
 
 ## Rules

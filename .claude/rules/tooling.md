@@ -6,6 +6,8 @@ The package manager is **bun**.
 
 | Command                            | What it does                             |
 | ---------------------------------- | ---------------------------------------- |
+| `bun run build`                    | `tsc` into `lib/`, which is what ships   |
+| `bun run typecheck`                | `tsc --noEmit`                           |
 | `bun run test` / `test:watch`      | Vitest                                   |
 | `bun run lint` / `lint:fix`        | ESLint                                   |
 | `bun run format` / `format:check`  | Prettier                                 |

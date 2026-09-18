@@ -6,10 +6,10 @@ nothing but that shape.
 ```
 dev machine                          device
 ───────────                          ──────
-cli/  watch → gradle → d8        ─→  agent.cpp        → ART redefines the classes
-cli/  watch → generate → xcode   ─→  HotswapLoader.mm → dyld loads, swift replaces
-cli/  watch → include  → xcode   ─→  HotswapLoader.mm → rebind + patch vtables
-cli/  watch → ndk      → clang   ─→  native_swap.cpp  → dlopen, branch at each entry
+src/  watch → gradle → d8        ─→  agent.cpp        → ART redefines the classes
+src/  watch → generate → xcode   ─→  HotswapLoader.mm → dyld loads, swift replaces
+src/  watch → include  → xcode   ─→  HotswapLoader.mm → rebind + patch vtables
+src/  watch → ndk      → clang   ─→  native_swap.cpp  → dlopen, branch at each entry
 metro.cjs  starts the watcher
 ```
 
@@ -19,7 +19,7 @@ metro.cjs  starts the watcher
 else. The agent receives a class name and a dex buffer, and its whole job is to hand them to
 ART.
 
-Anything that reasons about Gradle, file paths or Kotlin belongs in `cli/`. Anything that
+Anything that reasons about Gradle, file paths or Kotlin belongs in `src/`. Anything that
 touches JVMTI belongs in `agent.cpp`. Neither imports the other's concerns.
 
 ## The agent is a guest in someone else's app
@@ -60,8 +60,11 @@ works and the guarantee is weaker.
 | ------------------------ | ------------------------------------------------------------- |
 | `android/src/main/cpp/`  | the JVMTI agent, and the vendored ART header it needs         |
 | `android/src/main/java/` | the attach path: a ReactPackage and the agent loader          |
-| `cli/bin/`               | the executable entry point                                    |
-| `cli/src/library/`       | one function per file: resolve, compile, send, watch          |
+| `src/bin.ts`             | the executable entry point, argument handling only            |
+| `src/hotswap.class.ts`   | the facade both entry points go through                       |
+| `src/classes/`           | agent, configuration, watcher, and one swapper per mechanism  |
+| `src/library/`           | the helpers more than one class needs                         |
+| `gradle/`                | the init script that reads the app's minSdk and build-tools   |
 | `metro.cjs`              | starts the watcher inside Metro so there is no second process |
 
 ## Maintenance rules
