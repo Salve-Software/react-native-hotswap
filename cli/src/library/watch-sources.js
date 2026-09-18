@@ -1,11 +1,11 @@
 import { existsSync, watch } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
-const SOURCES = ['.kt', '.swift'];
+const SOURCES = ['.kt', '.swift', '.cpp', '.cc', '.cxx'];
 
-// The Swift path writes this file itself, and watching it would make every swap trigger
+// The iOS path writes these files itself, and watching them would make every swap trigger
 // another one.
-const GENERATED = 'HotswapPatch.swift';
+const GENERATED = 'HotswapPatch';
 
 /** Calls back once per settled edit, ignoring the burst an editor save produces. */
 export function watchSources(directories, onChange) {
@@ -14,7 +14,7 @@ export function watchSources(directories, onChange) {
   for (const directory of directories.filter((d) => existsSync(d))) {
     watch(directory, { recursive: true }, (_event, name) => {
       if (!SOURCES.some((extension) => name?.endsWith(extension))) return;
-      if (name.endsWith(GENERATED)) return;
+      if (basename(name).startsWith(GENERATED)) return;
 
       const file = join(directory, name);
       clearTimeout(pending.get(file));

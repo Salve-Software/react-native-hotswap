@@ -18,7 +18,7 @@ export function loadConfig(root) {
     buildTools: undefined,
     watch: app
       ? [join(root, 'android/app/src/main/java')]
-      : [join(root, 'android/src/main/java'), join(root, 'ios')],
+      : [join(root, 'android/src/main/java'), join(root, 'ios'), join(root, 'cpp')],
     project: findGradle(root),
     task: app ? ':app:compileDebugKotlin' : `:${pkg.name}:compileDebugKotlin`,
     classes: app

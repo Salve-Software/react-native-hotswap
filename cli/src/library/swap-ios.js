@@ -2,8 +2,8 @@ import { relative } from 'node:path';
 import { buildDylib } from './build-dylib.js';
 import { sendImage } from './send-image.js';
 
-/** Recompiles one Swift file into a dylib and loads it into the running app. */
-export async function swapSwift(path, config) {
+/** Recompiles one Swift or C++ file into a dylib and loads it into the running app. */
+export async function swapIos(path, config) {
   const started = Date.now();
   const name = relative(config.root, path);
 

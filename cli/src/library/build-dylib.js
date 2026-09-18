@@ -2,62 +2,68 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { generateSwiftReplacement } from './generate-swift-replacement.js';
-
-const PATCH = 'HotswapPatch.swift';
-const PLACEHOLDER = 'import Foundation\n';
+import { PATCHES, patchFor } from './patch-for.js';
 
 /**
- * Turns a changed Swift file into a dylib the running app can adopt.
+ * Turns a changed Swift or C++ file into a dylib the running app can adopt.
  *
- * The change is written as an extension of dynamic replacements into a file the pod already
- * globs, so Xcode compiles it with the settings the app was built with. Reproducing swiftc's
- * invocation is the usual approach and it drifts constantly.
+ * The change is written into a file the pod already globs, so Xcode compiles it with the
+ * settings the app was built with. Reproducing swiftc's invocation is the usual approach and
+ * it drifts constantly.
  */
 export function buildDylib(
   path,
   { workspace, scheme, derivedData, arch, iosTarget, patchDir },
 ) {
-  const replacement = generateSwiftReplacement(readFileSync(path, 'utf8'));
-  if (!replacement) throw new Error(`${basename(path)} declares no replaceable methods`);
+  const patch = patchFor(path, readFileSync(path, 'utf8'));
+  if (!patch) throw new Error(`${basename(path)} declares no replaceable methods`);
 
-  const patch = join(patchDir, PATCH);
+  ensurePatches(patchDir);
 
-  // CocoaPods globs sources at install time, so a file that appears later is invisible to
-  // the target until the next install. Creating it is cheap; telling the developer is not.
-  if (!existsSync(patch)) {
-    writeFileSync(patch, PLACEHOLDER);
-
-    throw new Error(`created ${PATCH}; run pod install once, then save again`);
-  }
-
-  writeFileSync(patch, replacement);
-
-  execFileSync(
-    'xcodebuild',
-    [
-      '-workspace',
-      workspace,
-      '-scheme',
-      scheme,
-      '-configuration',
-      'Debug',
-      '-sdk',
-      'iphonesimulator',
-      '-derivedDataPath',
-      derivedData,
-      'build',
-    ],
-    { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 },
-  );
+  const file = join(patchDir, patch.file);
+  writeFileSync(file, patch.contents);
 
   try {
-    return link(objectFor({ derivedData, scheme, arch }), iosTarget);
+    execFileSync(
+      'xcodebuild',
+      [
+        '-workspace',
+        workspace,
+        '-scheme',
+        scheme,
+        '-configuration',
+        'Debug',
+        '-sdk',
+        'iphonesimulator',
+        '-derivedDataPath',
+        derivedData,
+        'build',
+      ],
+      { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 },
+    );
+
+    return link(objectFor({ derivedData, scheme, arch, patch }), iosTarget);
   } finally {
-    // The object is already linked, so the file can go back to being empty and the
-    // developer's working tree stays clean between saves.
-    writeFileSync(patch, PLACEHOLDER);
+    // The object is already linked, and a failed build must not leave the change behind
+    // either, so the developer's working tree stays clean between saves.
+    writeFileSync(file, patch.placeholder);
   }
+}
+
+// CocoaPods globs sources at install time, so a file that appears later is invisible to the
+// target until the next install. Creating every patch at once means one pod install covers
+// both languages rather than one per language, on separate days.
+function ensurePatches(patchDir) {
+  const missing = PATCHES.filter(({ file }) => !existsSync(join(patchDir, file)));
+  if (missing.length === 0) return;
+
+  for (const { file, placeholder } of missing) {
+    writeFileSync(join(patchDir, file), placeholder);
+  }
+
+  const names = missing.map(({ file }) => file).join(' and ');
+
+  throw new Error(`created ${names}; run pod install once, then save again`);
 }
 
 /** Only the patch object is linked: a dylib of the whole module loads a second copy of its
@@ -95,12 +101,12 @@ function link(object, iosTarget) {
   return out;
 }
 
-function objectFor({ derivedData, scheme, arch }) {
+function objectFor({ derivedData, scheme, arch, patch }) {
   return join(
     derivedData,
     'Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator',
     `${scheme}.build/Objects-normal/${arch}`,
-    PATCH.replace('.swift', '.o'),
+    patch.file.replace(/\.\w+$/, '.o'),
   );
 }
 
