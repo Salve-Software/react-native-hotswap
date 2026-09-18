@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { resolveOverrides } from './resolve-overrides.js';
 import { findPodName } from './find-pod-name.js';
 import { findWorkspace } from './find-workspace.js';
 import { readGradleConfig } from './read-gradle-config.js';
@@ -35,13 +36,8 @@ export function loadConfig(root) {
   };
 
   const file = join(root, 'hotswap.config.json');
-  const overrides = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
-
-  for (const key of ['project', 'classes', 'specs', 'generated', 'patchDir']) {
-    if (overrides[key]) overrides[key] = resolve(root, overrides[key]);
-  }
-
-  if (overrides.watch) overrides.watch = overrides.watch.map((at) => resolve(root, at));
+  const written = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
+  const overrides = resolveOverrides(root, written);
 
   return {
     ...defaults,
