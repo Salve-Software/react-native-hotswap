@@ -1,12 +1,12 @@
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { splitCommand } from './split-command.js';
 import type { CompileCommand } from '../../../../types/index.js';
 
 /** Compiles one changed file into a library the running app can load. */
-export function buildSharedObject(entry: CompileCommand): string {
+export function buildSharedObject(entry: CompileCommand, against: string): string {
   const args = splitCommand(entry.command);
   const compiler = args[0] as string;
   const at = mkdtempSync(join(tmpdir(), 'hotswap-'));
@@ -32,6 +32,10 @@ export function buildSharedObject(entry: CompileCommand): string {
       '-o',
       library,
       object,
+      // Without this the patch has no DT_NEEDED on the library it was cut from, and a
+      // translation unit that calls into the rest of the module fails to load outright.
+      `-L${dirname(against)}`,
+      `-l${basename(against).replace(/^lib|\.so$/g, '')}`,
     ],
     { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 },
   );

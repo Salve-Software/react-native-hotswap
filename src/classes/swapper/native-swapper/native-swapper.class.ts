@@ -33,14 +33,13 @@ export class NativeSwapper implements Swapper {
 
       const entry = readCompileCommand(path, this.config);
       const nm = join(dirname(splitCommand(entry.command)[0] as string), 'llvm-nm');
-      const library = buildSharedObject(entry);
+      const original = findNativeLibrary(entry, this.config);
+      const library = buildSharedObject(entry, original);
 
       // The room a jump needs is the original's, not the new one's: an edit that grows a
       // function would otherwise report space that the running code does not have.
       const room = new Map(
-        readSymbols(findNativeLibrary(entry, this.config), nm).map(
-          ({ name: at, size }) => [at, size],
-        ),
+        readSymbols(original, nm).map(({ name: at, size }) => [at, size]),
       );
 
       const symbols = readSymbols(library, nm)

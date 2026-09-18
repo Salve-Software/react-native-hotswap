@@ -2,12 +2,12 @@
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { Hotswap } from './hotswap.class.js';
-import { platformsFor } from './library/index.js';
+import { isSwappable } from './library/index.js';
 
 const argument = process.argv[2];
 const check = argument === '--check';
 const target = check ? undefined : argument;
-const isFile = target !== undefined && platformsFor(target).length > 0;
+const isFile = target !== undefined && isSwappable(target);
 const path = target ? resolve(target) : process.cwd();
 
 const hotswap = new Hotswap(isFile ? findRoot(path) : path);

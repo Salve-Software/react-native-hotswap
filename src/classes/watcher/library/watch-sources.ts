@@ -1,7 +1,8 @@
 import { existsSync, watch } from 'node:fs';
 import { basename, join } from 'node:path';
 
-const SOURCES = ['.kt', '.swift', '.cpp', '.cc', '.cxx'];
+import { isSwappable } from '../../../library/is-swappable.js';
+
 const SETTLE = 120;
 
 // The iOS path writes these files itself, and watching them would make every swap trigger
@@ -17,7 +18,7 @@ export function watchSources(
 
   for (const directory of directories.filter((at) => existsSync(at))) {
     watch(directory, { recursive: true }, (_event, name) => {
-      if (!name || !SOURCES.some((extension) => name.endsWith(extension))) return;
+      if (!name || !isSwappable(name)) return;
       if (basename(name).startsWith(GENERATED)) return;
 
       const file = join(directory, name);

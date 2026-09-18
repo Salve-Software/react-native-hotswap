@@ -66,6 +66,21 @@ Kotlin is the part that does not care. Swift and C++ are compiled through the po
 ships, so an app with no podspec of its own swaps Kotlin only — `--check` says so rather than
 letting the first save fail on a missing build setting.
 
+## Headers
+
+Editing a `.h` or `.hpp` swaps everything that reaches it, since a header compiles into
+nothing of its own:
+
+```
+  ↳ cpp/FoldGeometry.hpp  included by 2
+  ✅ cpp/FoldGeometry.cpp  278ms
+  ✅ cpp/FoldMath.cpp  291ms
+```
+
+The graph is built from quoted includes across the watched directories, followed through
+other headers. An angled include belongs to a framework and stops the walk. A translation
+unit outside the watched directories is not reached, which is the case worth knowing.
+
 ## When it does not work
 
 ```bash
@@ -132,6 +147,9 @@ refuses and tells you:
   callback table allocated on the heap, still holds the old address and keeps calling it.
 - **Swift properties and new methods.** iOS replaces method bodies, through Swift's dynamic
   replacement. A method that did not exist when the app launched has nothing to replace.
+- **Static initialisers run again.** A swapped translation unit is loaded, so anything it
+  constructs at load time is constructed a second time. Keep one-time setup out of the file
+  you are editing, or expect it twice.
 - **A Swift top-level function.** The replacement is emitted as an extension, so it needs a
   type to extend. Methods on a `class`, `struct`, `enum`, `actor` or `extension` all swap.
 - **iOS devices.** Simulator only.

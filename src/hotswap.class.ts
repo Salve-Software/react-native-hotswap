@@ -7,7 +7,14 @@ import {
   NativeSwapper,
   Watcher,
 } from './classes/index.js';
-import { checkSetup, forwardPort, platformsFor } from './library/index.js';
+import { HEADERS } from './constants/index.js';
+import {
+  checkSetup,
+  findDependents,
+  findSources,
+  forwardPort,
+  platformsFor,
+} from './library/index.js';
 import type { Platform, SwapConfig, Swapper } from './types/index.js';
 
 /** The one entry point: reads a project's layout and swaps what it saves into the running app. */
@@ -26,6 +33,34 @@ export class Hotswap {
   }
 
   async swap(path: string): Promise<boolean> {
+    return HEADERS.some((end) => path.endsWith(end))
+      ? this.swapDependents(path)
+      : this.swapOne(path);
+  }
+
+  // A header compiles into nothing of its own, so what gets rebuilt is everything that
+  // reaches it — otherwise the edit looks applied and the running code is the old one.
+  private async swapDependents(header: string): Promise<boolean> {
+    const name = relative(this.config.root, header);
+    const dependents = findDependents(header, findSources(this.config.watch));
+
+    if (dependents.length === 0) {
+      console.log(`  ⛔ ${name}  nothing watched includes it`);
+
+      return false;
+    }
+
+    console.log(`  ↳ ${name}  included by ${dependents.length}`);
+
+    let swapped = false;
+    for (const dependent of dependents) {
+      if (await this.swapOne(dependent)) swapped = true;
+    }
+
+    return swapped;
+  }
+
+  private async swapOne(path: string): Promise<boolean> {
     let swapped = false;
 
     for (const platform of await this.intendedFor(path)) {
