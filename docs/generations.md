@@ -188,15 +188,28 @@ duplicate C name across images never has to be resolved globally.
 Three things have to come out of the captured line, and one of them is a limit rather than
 housekeeping:
 
-| Dropped | Why |
-| ------- | --- |
-| Xcode's output paths | they point into a build the generation is not part of |
-| `-emit-const-values` and friends | they write where Xcode expects, not where we do |
-| **`-import-underlying-module`** | it looks for an Objective-C module named after `-module-name`, and a generation's name is new every time |
+| Dropped                          | Why                                                                                                      |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Xcode's output paths             | they point into a build the generation is not part of                                                    |
+| `-emit-const-values` and friends | they write where Xcode expects, not where we do                                                          |
+| **`-import-underlying-module`**  | it looks for an Objective-C module named after `-module-name`, and a generation's name is new every time |
 
 The last one costs something real: Swift that reaches the pod's own Objective-C headers
 through the underlying module will not compile this way. Worth knowing before promising the
 iOS side works for any module.
+
+The capture itself has a wrinkle: `-dry-run` is gone from xcodebuild, and a build that
+recompiles nothing prints no invocation. So the patch file is touched to make the module one
+of the things that build has to do, and the result is kept — the second generation does not
+pay for it again:
+
+```
+generation 1   3172ms    build, capture, replay
+generation 2    275ms    replay
+```
+
+That makes a generation faster than the Swift patch path, which is around six seconds,
+because patching goes through Xcode every save and a generation replays swiftc directly.
 
 What this costs:
 
