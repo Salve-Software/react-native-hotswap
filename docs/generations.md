@@ -222,6 +222,27 @@ because patching goes through Xcode every save and a generation replays swiftc d
 The method the generation called did not exist when the app was installed, which is the thing
 dynamic replacement cannot do. Same pid throughout.
 
+### What the delegate hook reaches, measured
+
+React Native asks `getModuleClassFromName:` for every module it resolves through its
+delegate, and hotswap is given first refusal on all of them. Instrumented on the example, one
+launch:
+
+```
+41 calls: AccessibilityManager, AppState, BlobModule, DevMenu, Networking, ...
+```
+
+Returning nil falls through to React Native's own provider, so the hook is inert until a
+generation exposes the name being asked for.
+
+What it does **not** reach is a module registered the old way. A class exported with
+`RCT_EXPORT_MODULE` or `RCT_EXTERN_MODULE` is resolved from React Native's global registry,
+and the delegate is never consulted for it — verified by adding one and watching it never
+appear among the names, while `getModuleInstanceFromClass:` only ever saw `RCT*` classes.
+
+So an iOS generation replaces TurboModules, and a legacy module keeps whatever the app was
+built with. Worth knowing before promising the iOS side to a project that has them.
+
 ### Patching cannot follow a generation on iOS
 
 A generation is its own Swift module, so its types are not the ones a replacement names: after
