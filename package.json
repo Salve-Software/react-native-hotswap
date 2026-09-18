@@ -6,15 +6,19 @@
     "hotswap": "./cli/bin/hotswap.js"
   },
   "files": [
+    "android/build.gradle",
+    "android/src",
+    "android/CMakeLists.txt",
+    "ios",
+    "cli",
+    "src",
+    "metro.cjs",
+    "hotswap.rb",
     "*.podspec",
     "README.md",
-    "android",
-    "cli",
-    "hotswap.rb",
-    "ios",
-    "lib",
-    "metro.cjs",
-    "src"
+    "LICENSE",
+    "!**/__tests__",
+    "!**/*.test.js"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
