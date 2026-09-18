@@ -65,7 +65,10 @@ export function buildDylib(
 function link(object, iosTarget) {
   if (!existsSync(object)) throw new Error(`xcode produced no object at ${object}`);
 
-  const out = join(mkdtempSync(join(tmpdir(), 'hotswap-')), 'patch.dylib');
+  // dyld keys a loaded image on its install name, so a second dylib called patch.dylib comes
+  // back as the handle of the first and the new file is never mapped. The name has to differ
+  // on every swap.
+  const out = join(mkdtempSync(join(tmpdir(), 'hotswap-')), `patch-${Date.now()}.dylib`);
 
   execFileSync(
     'xcrun',

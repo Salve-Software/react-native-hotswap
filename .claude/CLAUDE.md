@@ -82,8 +82,9 @@ Two constraints that come with it:
   Nitro dispatches through a C++ vtable, so nothing names the Swift method in a way that could
   be rewritten. `@_dynamicReplacement` goes around that entirely.
 
-A stale replacement wins over a newer one: loading a second dylib that replaces the same
-method leaves the first in place. Restarting the app clears it.
+Every swap links its dylib under a new name. dyld keys a loaded image on its install name, so
+a second `patch.dylib` came back as the handle of the first and the new file was never mapped
+— which looked like the replacement silently failing on every save after the first.
 
 ## Mandatory rules
 

@@ -181,7 +181,8 @@ Two things to know:
 
 - `ios/HotswapPatch.swift` has to exist before `pod install`, because CocoaPods globs sources
   at install time. It is rewritten on every save.
-- A replacement already loaded wins over a newer one. Restart the app to clear it.
+- Each swap links a dylib under a new name. dyld keys a loaded image on its install name, so
+  reusing one would hand back the first handle and quietly leave the old code running.
 
 ### Why not build tools 37
 
