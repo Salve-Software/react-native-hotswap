@@ -13,9 +13,18 @@ def hotswap_post_install(installer)
 
         flags = config.build_settings['OTHER_LDFLAGS'] || ['$(inherited)']
         flags = [flags] if flags.is_a?(String)
-        next if flags.include?('-interposable')
+        unless flags.include?('-interposable')
+          config.build_settings['OTHER_LDFLAGS'] = flags + ['-Xlinker', '-interposable']
+        end
 
-        config.build_settings['OTHER_LDFLAGS'] = flags + ['-Xlinker', '-interposable']
+        # Makes every Swift function replaceable, which is what lets a reloaded extension
+        # take over a method the caller reaches through a vtable.
+        swift = config.build_settings['OTHER_SWIFT_FLAGS'] || ['$(inherited)']
+        swift = [swift] if swift.is_a?(String)
+        next if swift.include?('-enable-implicit-dynamic')
+
+        config.build_settings['OTHER_SWIFT_FLAGS'] =
+          swift + ['-Xfrontend', '-enable-implicit-dynamic', '-Xfrontend', '-enable-private-imports']
       end
     end
 
