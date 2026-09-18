@@ -78,6 +78,43 @@ change shape, generations change shape and cannot keep objects.
 - **Objective-C modules.** See below: they collide by name where Swift does not.
 - **Native state inside the module.** Gone on every reload, by construction.
 
+## Driven through React Native's own reload
+
+Measured end to end, same pid, no reinstall:
+
+```
+kotlin=1        thread 3922    the apk's reporter
+kotlin=777777   thread 3957    the generation's, calling a class compiled after install
+```
+
+`HotswapReactHost` builds a `ReactHostImpl` with a delegate whose `reactPackages` getter runs
+per instance. Publishing a generation and calling `reload()` gives the new instance the
+generation's packages, and RN instantiates them itself.
+
+The app's side of this is one line:
+
+```kotlin
+override val reactHost: ReactHost by lazy {
+  HotswapReactHost.create(applicationContext) { PackageList(this).packages }
+}
+```
+
+### A native library belongs to one class loader
+
+`System.loadLibrary` binds the library to the loader that called it, so a generation owning a
+class with native methods brings the app down on its `<clinit>` — the second loader is
+refused outright.
+
+Those classes stay in the app's loader, which the generation's filter lets through. It is a
+real constraint on the boundary, not a detail: **a class with native methods cannot belong to
+a generation.** Finding them is mechanical — the dex marks them `ACC_NATIVE` — so this should
+be derived rather than configured.
+
+### The old generation does not stop by itself
+
+Both reporters above are still logging. RN tears down the modules it owns, but a thread a
+module started is not RN's to stop. Generations end the code, not what the code spawned.
+
 ## iOS
 
 Both halves hold there too, for different reasons than on Android.
@@ -129,7 +166,7 @@ What this costs:
 
 1. ~~**Prove the loader.**~~ Done, above.
 2. **Compile a generation.** Reuse what already compiles a module, emit a dex per generation.
-3. **Drive the reload.** Publish, then ask `ReactHost` to reload, then report what changed.
+3. ~~**Drive the reload.**~~ Done, above.
 4. **Fall back honestly.** A change that patching handles should still be patched: it is
    faster and it keeps objects. Generations are for what patching cannot do.
 5. **iOS.** A Swift module per generation, reached through a factory.

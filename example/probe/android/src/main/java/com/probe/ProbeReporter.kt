@@ -13,10 +13,13 @@ internal object ProbeReporter {
 
     Thread {
       while (true) {
-        Log.i(
-          "Probe",
-          "kotlin=${ProbeValues.value()} cpp=${ProbeNative.cppValue()} shape=${ProbeNative.cppShape()}",
-        )
+        runCatching {
+          Log.i(
+            "Probe",
+            "kotlin=${ProbeValues.value()} cpp=${ProbeNative.cppValue()} shape=${ProbeNative.cppShape()}",
+          )
+        }
+          .onFailure { Log.e("Probe", "reporter failed", it) }
         Thread.sleep(1000)
       }
     }
