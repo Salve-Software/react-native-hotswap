@@ -40,12 +40,19 @@ a posture the Android implementation can never produce, in the same process, wit
 reinstall. Around 1.3s from save to swapped, against 10–30s for a rebuild that also drops
 the app's state.
 
-**Two things are open:**
+**Structural redefinition works, and that is the whole ceiling question.** Adding a method
+and a field to a class the app had already loaded, then calling both from a swapped method,
+runs in the same process. Measured on `HybridUnfoldBridge`:
 
-| Open                              | Detail                                                                   |
-| --------------------------------- | ------------------------------------------------------------------------ |
-| Nitro implementation classes fail | `jvmtiError 103` on `HybridUnfoldBridge`; plain Kotlin classes swap fine |
-| Autolinking skips the package     | the example force-links it through `react-native.config.js`              |
+```
+STRUCTURAL: getState called brandNewMethod() = 7
+STRUCTURAL: new field reads 7
+```
+
+This matters because the JVMTI approach is usually described as method-bodies-only — that is
+classic `RedefineClasses`. ART's structural extension, present from Android 11, lifts it.
+Compose HotSwan moved off JVMTI to an interpreter over exactly this limit; the limit is real
+for the old call and not for the extension.
 
 **iOS is not started.** The mechanism is different — a recompiled dylib plus linker
 interposing — and the prior art is MIT. It covers Swift, Objective-C and C++ through one
