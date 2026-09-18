@@ -73,3 +73,21 @@ xcrun simctl spawn <device> log show --last 30s --predicate 'eventMessage CONTAI
 
 The line to look for is `swift replacements applied`. `no swift replacements` means the dylib
 loaded and changed nothing, which the CLI reports as a failure.
+
+For C++ the check has to cover both mechanisms at once, so the probe pairs a free function
+with a virtual method and logs them on a loop:
+
+```cpp
+os_log(OS_LOG_DEFAULT, "[Hotswap] probe free=%d virtual=%d", hotswapProbeFree(), probe->value());
+```
+
+Swap the file twice, with different values each time. Both numbers must follow, and the pid
+must not change. A free function that moves while the virtual one stays is the vtable going
+unpatched; a second swap that does not move is the installed-address registry.
+
+Two things the probe itself has to get right, both of which cost a cycle:
+
+- **The driver cannot live in the file being swapped**, or loading the patch runs it a second
+  time and the reading is worthless.
+- **Nothing references a probe, so the linker drops it.** It only survives in a static
+  library if an Objective-C `+load` pulls the object in, since the app links with `-ObjC`.

@@ -8,6 +8,7 @@ dev machine                          device
 ───────────                          ──────
 cli/  watch → gradle → d8        ─→  agent.cpp        → ART redefines the classes
 cli/  watch → generate → xcode   ─→  HotswapLoader.mm → dyld loads, swift replaces
+cli/  watch → include  → xcode   ─→  HotswapLoader.mm → rebind + patch vtables
 metro.cjs  starts the watcher
 ```
 
@@ -74,8 +75,11 @@ works and the guarantee is weaker.
   status. Anything richer belongs on the CLI side.
 - **Capabilities are asked for, never assumed.** ART grants a different set per version;
   `GetPotentialCapabilities` decides what to request.
-- **C++ is out of scope, on purpose.** Loading a recompiled `.so` needs root and an ELF
-  rebinder, and in a Nitro module the C++ is generated from the spec — which already forces a
-  rebuild when it changes. Revisit only if hand-written C++ HybridObjects become common.
+- **C++ is an iOS mechanism only.** On the simulator a dylib loads freely, so a changed
+  translation unit is compiled and its addresses taken over. On Android, loading a recompiled
+  `.so` needs root and an ELF rebinder, and that has not changed.
+- **A call is reached two ways, and only one names a symbol.** Free functions and non-virtual
+  methods go through a symbol slot and are rebound; a virtual call reads the vtable, which
+  holds the address directly. Anything that swaps C++ has to do both.
 - **Config resolves against the module root**, never `process.cwd()` — Metro runs out of the
   example app.

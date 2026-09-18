@@ -1,7 +1,8 @@
 # react-native-hotswap
 
-Swaps the Kotlin side of a running React Native app without reinstalling it. Save the file,
-the class is replaced in place, the app keeps its state.
+Swaps the native side of a running React Native app without reinstalling it — Kotlin on
+Android, Swift and C++ on the iOS simulator. Save the file, the code is replaced in place,
+the app keeps its state.
 
 A JVMTI agent rides inside the app; a watcher on the dev machine compiles and ships each
 edit. Installing the package and adding two lines to `metro.config.js` is the whole setup.
@@ -81,6 +82,21 @@ Two constraints that come with it:
 - **Symbol rebinding is not the mechanism.** The rebinder is still there and still safe, but
   Nitro dispatches through a C++ vtable, so nothing names the Swift method in a way that could
   be rewritten. `@_dynamicReplacement` goes around that entirely.
+
+**C++ swaps on the simulator, virtual methods included.** The changed translation unit is
+included into a patch the pod globs, so Xcode compiles it with the target's own flags. Then
+two mechanisms, because a call reaches its target two ways: a free function goes through a
+symbol slot and is rebound, a virtual call reads the vtable and the pointer there is
+overwritten. Measured in one process, no restart: `free=7 virtual=4242` to `free=11
+virtual=22` to `free=33 virtual=44`, the second swap in 3.1s.
+
+Two traps that cost the evening. Only symbols in executable sections are taken over, or a
+global in the edited file has its pointers aimed at a fresh copy and loses its state. And
+what a swap installs has to be remembered: a patched vtable slot no longer holds the address
+the symbol table reports, so the second swap of a method finds nothing and the first swap's
+code keeps running.
+
+Android C++ is still out, and for an unchanged reason: W^X blocks loading a recompiled `.so`.
 
 Every swap links its dylib under a new name. dyld keys a loaded image on its install name, so
 a second `patch.dylib` came back as the handle of the first and the new file was never mapped
