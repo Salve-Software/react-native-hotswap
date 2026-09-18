@@ -10,6 +10,11 @@
 
 namespace {
 
+struct Replacement {
+  void *handle;
+  const void *base;
+};
+
 struct SymbolTable {
   const nlist_64 *symbols;
   const char *strings;
@@ -59,7 +64,9 @@ bool makeWritable(void *address, size_t size) {
 size_t rebindSection(const section_64 *section,
                      intptr_t slide,
                      const SymbolTable &table,
-                     void *replacementImage) {
+                     const Replacement &replacement_) {
+  void *replacementImage = replacement_.handle;
+  const void *replacementBase = replacement_.base;
   auto **slots = (void **)(slide + section->addr);
   const uint32_t *indirect = table.indirect + section->reserved1;
   const size_t count = section->size / sizeof(void *);
@@ -79,6 +86,11 @@ size_t rebindSection(const section_64 *section,
     void *replacement = dlsym(replacementImage, name + 1);
     if (replacement == nullptr || replacement == slots[i]) continue;
 
+    // dlsym walks the handle's dependencies too, so a hit may live in Foundation or the
+    // Swift runtime. Only an address inside the new image is a replacement.
+    Dl_info info{};
+    if (dladdr(replacement, &info) == 0 || info.dli_fbase != replacementBase) continue;
+
     slots[i] = replacement;
     rebound++;
   }
@@ -86,7 +98,7 @@ size_t rebindSection(const section_64 *section,
   return rebound;
 }
 
-size_t rebindImage(const mach_header_64 *header, intptr_t slide, void *replacementImage) {
+size_t rebindImage(const mach_header_64 *header, intptr_t slide, const Replacement &replacement) {
   SymbolTable table{};
   if (!readSymbolTable(header, slide, table)) return 0;
 
@@ -105,7 +117,7 @@ size_t rebindImage(const mach_header_64 *header, intptr_t slide, void *replaceme
           const uint32_t type = section->flags & SECTION_TYPE;
           if (type != S_LAZY_SYMBOL_POINTERS && type != S_NON_LAZY_SYMBOL_POINTERS) continue;
 
-          rebound += rebindSection(section, slide, table, replacementImage);
+          rebound += rebindSection(section, slide, table, replacement);
         }
       }
     }
@@ -119,6 +131,12 @@ size_t rebindImage(const mach_header_64 *header, intptr_t slide, void *replaceme
 }  // namespace
 
 size_t HotswapRebindSymbols(void *replacementImage) {
+  Dl_info probe{};
+  void *anchor = dlsym(replacementImage, "__mh_dylib_header");
+  if (anchor == nullptr || dladdr(anchor, &probe) == 0) return 0;
+
+  const Replacement replacement{replacementImage, probe.dli_fbase};
+
   size_t rebound = 0;
   NSString *bundle = NSBundle.mainBundle.bundlePath;
 
@@ -132,7 +150,9 @@ size_t HotswapRebindSymbols(void *replacementImage) {
     NSString *path = @(_dyld_get_image_name(i));
     if (![path hasPrefix:bundle]) continue;
 
-    rebound += rebindImage(header, _dyld_get_image_vmaddr_slide(i), replacementImage);
+    if ((const void *)header == replacement.base) continue;
+
+    rebound += rebindImage(header, _dyld_get_image_vmaddr_slide(i), replacement);
   }
 
   return rebound;
