@@ -4,13 +4,14 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { checkSetup } from '../src/library/check-setup.js';
 import { loadConfig } from '../src/library/load-config.js';
+import { platformFor } from '../src/library/platform-for.js';
 import { startWatching } from '../src/library/start-watching.js';
 import { swapFile } from '../src/library/swap-file.js';
 
 const argument = process.argv[2];
 const check = argument === '--check';
 const target = check ? undefined : argument;
-const isFile = /\.(kt|swift)$/.test(target ?? '');
+const isFile = target !== undefined && platformFor(target) !== undefined;
 const path = target ? resolve(target) : process.cwd();
 const config = loadConfig(isFile ? findRoot(path) : path);
 
