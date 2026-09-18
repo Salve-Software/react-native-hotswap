@@ -132,6 +132,8 @@ refuses and tells you:
   callback table allocated on the heap, still holds the old address and keeps calling it.
 - **Swift properties and new methods.** iOS replaces method bodies, through Swift's dynamic
   replacement. A method that did not exist when the app launched has nothing to replace.
+- **A Swift top-level function.** The replacement is emitted as an extension, so it needs a
+  type to extend. Methods on a `class`, `struct`, `enum`, `actor` or `extension` all swap.
 - **iOS devices.** Simulator only.
 - **A class the app has not loaded yet.** It is skipped, and picked up from disk when it does
   load.
@@ -180,9 +182,9 @@ again:
 
 ### iOS, and why it is shaped this way
 
-A changed Swift file is rewritten as an extension of `@_dynamicReplacement` methods, written
-into `ios/HotswapPatch.swift`, compiled by Xcode, and linked alone into a dylib. Three
-attempts got there:
+A changed Swift file is rewritten as one extension of `@_dynamicReplacement` methods per type
+it declares, written into `ios/HotswapPatch.swift`, compiled by Xcode, and linked alone into a
+dylib. Three attempts got there:
 
 | Attempt                                          | Outcome                                                           |
 | ------------------------------------------------ | ----------------------------------------------------------------- |

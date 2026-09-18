@@ -5,17 +5,47 @@ interface Method {
   body: string;
 }
 
-/** Rewrites a Swift file as an extension whose methods dynamically replace the originals. */
-export function generateSwiftReplacement(source: string): string | undefined {
-  const type = /^\s*(?:\w+\s+)*(?:final\s+)?class\s+(\w+)/m.exec(source)?.[1];
-  if (!type) return undefined;
+interface Declaration {
+  name: string;
+  body: string;
+}
 
-  const methods = findMethods(source).map(toReplacement);
+/** Rewrites a Swift file as extensions whose methods dynamically replace the originals. */
+export function generateSwiftReplacement(source: string): string | undefined {
+  const extensions = findDeclarations(source)
+    .map(toExtension)
+    .filter((extension): extension is string => extension !== undefined);
+
+  if (extensions.length === 0) return undefined;
+
+  return [imports(source), ...extensions, ''].join('\n');
+}
+
+function toExtension({ name, body }: Declaration): string | undefined {
+  const methods = findMethods(body).map(toReplacement);
   if (methods.length === 0) return undefined;
 
-  return [imports(source), `extension ${type} {`, methods.join('\n\n'), '}', ''].join(
-    '\n',
-  );
+  return [`extension ${name} {`, methods.join('\n\n'), '}'].join('\n');
+}
+
+// A nested type is skipped with its parent's body: replacing it would need the qualified
+// name, and scanning the whole file instead once put one type's methods in another's
+// extension.
+function findDeclarations(source: string): Declaration[] {
+  const found: Declaration[] = [];
+  const opener =
+    /^[ \t]*(?:@\w+[^\n]*\n\s*)*(?:(?:public|internal|private|fileprivate|open|final)\s+)*(?:class|struct|enum|actor|extension)\s+(\w+)[^{]*\{/gm;
+
+  let match: RegExpExecArray | null;
+  while ((match = opener.exec(source)) !== null) {
+    const read = readBody(source, opener.lastIndex - 1);
+    if (read === undefined) continue;
+
+    found.push({ name: match[1] as string, body: read.body });
+    opener.lastIndex = read.end;
+  }
+
+  return found;
 }
 
 function imports(source: string): string {
