@@ -1,18 +1,21 @@
 # react-native-hotswap
 
-Change your Kotlin, save, and the running app picks it up. No reinstall, no restart, no lost
-state.
+Change your Kotlin, Swift or C++, save, and the running app picks it up. No reinstall, no
+restart, no lost state.
 
 ```
 hotswap  watching android/src/main/java  →  127.0.0.1:8099
   ✅ android/src/main/java/com/unfold/library/ToPosture.kt  952ms
   ✅ android/src/main/java/com/unfold/HybridUnfoldBridge.kt +3  1198ms
+  ✅ cpp/FoldGeometry.cpp  3105ms
 ```
 
 |                       | Save to running                           |
 | --------------------- | ----------------------------------------- |
 | Rebuild and reinstall | 10–30s, and the app restarts from scratch |
-| **hotswap**           | **~1s, same process**                     |
+| **hotswap, Kotlin**   | **~1s, same process**                     |
+| **hotswap, Swift**    | **~6s, same process**                     |
+| **hotswap, C++**      | **~3s, same process**                     |
 
 ## Install
 
@@ -111,10 +114,14 @@ refuses and tells you:
 
 ## What it cannot change
 
-- **C++, and probably never.** Android blocks loading code from app-writable storage, so a
-  recompiled `.so` would need root and an ELF rebinder. The cost is real and the benefit is
-  not: in a Nitro module the C++ is generated from the spec, and a spec change already
-  demands a rebuild. Hand-written C++ HybridObjects would gain, but they are the minority.
+- **C++ on Android.** Android blocks loading code from app-writable storage, so a recompiled
+  `.so` would need root and an ELF rebinder. C++ swaps on the iOS simulator, where nothing
+  stops a dylib from loading — see below.
+- **Objective-C and Objective-C++.** Compiling a `.mm` into the patch would define its classes
+  a second time, and the runtime resolves that by picking one of them. `.m` and `.mm` are left
+  alone on purpose.
+- **Anything already inlined.** A body the compiler copied into its callers is not reachable
+  by any of this. Debug builds inline little, which is why it mostly does not come up.
 - **Swift properties and new methods.** iOS replaces method bodies, through Swift's dynamic
   replacement. A method that did not exist when the app launched has nothing to replace.
 - **iOS devices.** Simulator only.
@@ -129,6 +136,7 @@ refuses and tells you:
 | ----------- | ------------------------------------------------ |
 | Android     | API 28 to attach, API 30 for structural changes  |
 | iOS         | simulator, and the Podfile hook below            |
+| Languages   | Kotlin on Android; Swift and C++ on iOS          |
 | Build       | debuggable                                       |
 | Build tools | 34, 35 or 36 — [not 37](#why-not-build-tools-37) |
 
@@ -174,8 +182,9 @@ attempts got there:
 | Link the module's objects                        | loads a second copy of the module's Swift metadata, kills the app |
 | **Generate, let Xcode compile, link one object** | works                                                             |
 
-Symbol rebinding is not the mechanism. Nitro dispatches through a C++ vtable, so nothing
-names the Swift method in a way that could be rewritten; dynamic replacement goes around it.
+Symbol rebinding is not the mechanism for Swift. Nitro dispatches through a C++ vtable, so
+nothing names the Swift method in a way that could be rewritten; dynamic replacement goes
+around it.
 
 Two things to know:
 
@@ -183,6 +192,37 @@ Two things to know:
   at install time. It is rewritten on every save.
 - Each swap links a dylib under a new name. dyld keys a loaded image on its install name, so
   reusing one would hand back the first handle and quietly leave the old code running.
+
+### C++, and the two ways a call finds its target
+
+C++ needs no rewriting: the changed file is included into a patch the pod already globs, so
+Xcode compiles it with the target's own flags and its relative includes keep resolving. The
+work is on the other side, because a call reaches its target in one of two ways and only one
+of them names a symbol.
+
+| Call                              | How it is reached       | What swaps it                    |
+| --------------------------------- | ----------------------- | -------------------------------- |
+| Free function, non-virtual method | a symbol slot, via GOT  | rebinding, needs `-interposable` |
+| **Virtual method**                | a pointer in the vtable | overwriting that pointer         |
+
+The vtable holds the address directly and names nothing, which is why a virtual method kept
+running its old body while a free function in the same file swapped correctly. Every address
+the new image defines is now found in the running images by name and overwritten wherever it
+is stored. Only symbols in executable sections count — a global in the edited file would
+otherwise have its pointers aimed at a fresh copy and lose its state.
+
+One consequence is not obvious: a patched vtable slot no longer holds the address the app's
+symbol table reports, so hotswap remembers what each swap installed. Without that, the second
+swap of a method looks up an address that is no longer in the slot and the first swap's code
+keeps running.
+
+Measured on the example, in one process, no restart:
+
+```
+baseline  free=7  virtual=4242
+swap 1    free=11 virtual=22     16645ms   (first build after a reinstall)
+swap 2    free=33 virtual=44      3105ms
+```
 
 ### Why not build tools 37
 
