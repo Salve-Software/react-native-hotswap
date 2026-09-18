@@ -2,11 +2,6 @@
   "name": "react-native-hotswap",
   "version": "0.1.0",
   "description": "Hot-swap the native side of your React Native app. Kotlin today, C++ and Swift next. Safest with Nitro.",
-  "main": "./lib/commonjs/index.js",
-  "module": "./lib/module/index.js",
-  "types": "./lib/typescript/src/index.d.ts",
-  "react-native": "src/index",
-  "source": "src/index",
   "bin": {
     "hotswap": "./cli/bin/hotswap.js"
   },
@@ -18,7 +13,6 @@
     "ios",
     "metro.cjs",
     "*.podspec",
-    "react-native.config.js",
     "README.md"
   ],
   "scripts": {
@@ -71,5 +65,11 @@
     "typescript-eslint": "^8.70.0",
     "vitest": "^5.0.1"
   },
-  "type": "module"
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./metro.cjs": "./metro.cjs",
+    "./package.json": "./package.json"
+  }
 }
