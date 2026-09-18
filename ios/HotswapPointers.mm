@@ -26,9 +26,21 @@ ByName definedBy(const HotswapImage &image) {
   return found;
 }
 
+// What the last swap put in place for a symbol. A vtable slot patched once no longer holds
+// the address the app's symbol table reports, so without this a second swap of the same
+// method finds nothing to overwrite and the first swap's code keeps running.
+ByName installed;
+
 /** Pairs each address the app is still running with the one that replaces it. */
 Addresses supersededBy(const ByName &fresh, const mach_header_64 *replacement) {
   __block Addresses found;
+
+  for (const auto &[name, address] : fresh) {
+    const auto previous = installed.find(name);
+    if (previous != installed.end() && previous->second != address) {
+      found[previous->second] = address;
+    }
+  }
 
   HotswapEachAppImage(replacement, ^(const HotswapImage &image) {
     HotswapSymbols symbols{};
@@ -78,7 +90,11 @@ size_t HotswapPatchPointers(const char *path) {
   // A virtual call reads its target out of the vtable, which holds the address directly and
   // names no symbol, so rebinding never sees it. The old address has to be found in memory
   // and overwritten wherever it was stored.
-  const Addresses superseded = supersededBy(definedBy(replacement), replacement.header);
+  const ByName fresh = definedBy(replacement);
+  const Addresses superseded = supersededBy(fresh, replacement.header);
+
+  for (const auto &[name, address] : fresh) installed[name] = address;
+
   if (superseded.empty()) return 0;
 
   __block size_t patched = 0;
