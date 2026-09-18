@@ -14,6 +14,7 @@ The package manager is **bun**.
 | `bun run clean`                   | `git clean -dfX`                         |
 | `hotswap --check`                 | reports what is wired up and what is not |
 | `npm pack --dry-run`              | what a consumer would actually receive   |
+| `bun run release`                 | semantic-release; CI runs it, not you    |
 
 From `example/android`, which is where a real build of the agent happens:
 
@@ -109,6 +110,34 @@ For a generation:
 | `no React package here to rebuild the module from` | the module, or the app, declares no `ReactPackage`           |
 | `UnsatisfiedLinkError` on a `<clinit>`             | a class with native methods ended up owned by the generation |
 | the reload happens and nothing changes             | the delegate hook is missing, or the module is a legacy one  |
+
+## The pipeline
+
+Four workflows, all under `.github/workflows/`:
+
+| Workflow            | When                     | What it proves                            |
+| ------------------- | ------------------------ | ----------------------------------------- |
+| `verify.yml`        | every push and PR        | types, lint, format, tests, and the agent |
+| `android-build.yml` | paths touching Android   | the example app still assembles           |
+| `ios-build.yml`     | paths touching iOS       | the podspec and the example still build   |
+| `release.yml`       | `workflow_dispatch` only | a version, a tag, a changelog, npm        |
+
+Releases are **manual by design**: `workflow_dispatch`, never on push. A tool that rewrites a
+running app should not publish itself the moment someone merges.
+
+`release.config.cjs` maps each commit type to a bump and a changelog section. `test`, `ci` and
+`style` carry `release: false` — they appear in the notes of a release something else
+triggered, and never trigger one alone.
+
+Two things the pipeline needs that live outside this repository:
+
+- **`NPM_TOKEN`** as a repository secret, for `@semantic-release/npm`.
+- **A remote.** There is none yet, so nothing here has ever run. `bunx semantic-release
+--dry-run --no-ci` fails at `git ls-remote` and that is the only reason.
+
+The example installs with **npm**, not bun: it links the library with `file:..` and keeps its
+own `package-lock.json`. CI installs the library with bun first, because npm has to find
+`lib/` already built by the library's `prepare`.
 
 ## Prettier and ESLint
 
