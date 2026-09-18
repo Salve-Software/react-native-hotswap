@@ -20,6 +20,12 @@ export function loadConfig(root) {
   const file = join(root, 'hotswap.config.json')
   const overrides = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {}
 
+  // Paths in the config file read as relative to the module, not to wherever the
+  // process happens to be started from — Metro runs out of the example app.
+  for (const key of ['watch', 'project', 'classes', 'abort']) {
+    if (overrides[key]) overrides[key] = resolve(root, overrides[key])
+  }
+
   return { ...defaults, ...overrides }
 }
 

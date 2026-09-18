@@ -16,6 +16,7 @@
     "cli",
     "android",
     "ios",
+    "metro.cjs",
     "*.podspec",
     "react-native.config.js",
     "README.md"
