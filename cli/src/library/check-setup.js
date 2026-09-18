@@ -1,9 +1,18 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { connect } from 'node:net';
+import { join } from 'node:path';
+import { PATCHES } from './patch-for.js';
 
 /** Reports what is wired up and what is missing, so setup fails loudly rather than silently. */
 export async function checkSetup(config) {
+  // Both ports time out when nothing is listening, and waiting for one before starting the
+  // other doubles how long a failing check takes to report.
+  const [agent, loader] = await Promise.all([
+    reachable(config.port),
+    reachable(config.iosPort),
+  ]);
+
   const lines = [
     report({
       what: 'gradle project',
@@ -23,7 +32,7 @@ export async function checkSetup(config) {
     report({ what: 'android device', ok: hasDevice(), detail: 'adb devices' }),
     report({
       what: 'agent reachable',
-      ok: await reachable(config.port),
+      ok: agent,
       detail: `port ${config.port}`,
     }),
     report({
@@ -31,9 +40,33 @@ export async function checkSetup(config) {
       ok: true,
       detail: config.workspace ?? 'none found, android only',
     }),
+    report({
+      what: 'ios loader',
+      ok: loader,
+      detail: `port ${config.iosPort}`,
+    }),
+    report({
+      what: 'ios patch files',
+      ok: missingPatches(config.patchDir).length === 0,
+      detail: describePatches(config.patchDir),
+    }),
   ];
 
   return lines;
+}
+
+// A patch file that appeared after the last pod install is invisible to the target, so the
+// first swap of that language fails on something that looks unrelated to setup.
+function missingPatches(patchDir) {
+  return PATCHES.filter(({ file }) => !existsSync(join(patchDir, file)));
+}
+
+function describePatches(patchDir) {
+  const missing = missingPatches(patchDir);
+
+  return missing.length === 0
+    ? 'present, pod install has seen them'
+    : `${missing.map(({ file }) => file).join(' and ')} missing; run pod install`;
 }
 
 function report({ what, ok, detail }) {
