@@ -1,0 +1,67 @@
+{
+  "name": "react-native-nitro-hot",
+  "version": "0.1.0",
+  "description": "Hot reload the Kotlin and Swift side of your Nitro modules, without reinstalling the app.",
+  "main": "./lib/commonjs/index.js",
+  "module": "./lib/module/index.js",
+  "types": "./lib/typescript/src/index.d.ts",
+  "react-native": "src/index",
+  "source": "src/index",
+  "bin": {
+    "nitro-hot": "./cli/bin/nitro-hot.js"
+  },
+  "files": [
+    "src",
+    "lib",
+    "cli",
+    "android",
+    "ios",
+    "*.podspec",
+    "react-native.config.js",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "bun run typecheck && bob build",
+    "clean": "git clean -dfX"
+  },
+  "keywords": [
+    "react-native",
+    "nitro",
+    "nitro-modules",
+    "hot reload",
+    "hot reloading",
+    "fast refresh",
+    "native module",
+    "kotlin",
+    "swift",
+    "jvmti",
+    "developer tools",
+    "android",
+    "ios"
+  ],
+  "repository": "https://github.com/Salve-Software/react-native-nitro-hot.git",
+  "author": "Salve Software (https://github.com/Salve-Software)",
+  "license": "MIT",
+  "bugs": "https://github.com/Salve-Software/react-native-nitro-hot/issues",
+  "homepage": "https://github.com/Salve-Software/react-native-nitro-hot#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "peerDependencies": {
+    "react-native": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "react-native": "0.76.5",
+    "react-native-builder-bob": "^0.33.3",
+    "typescript": "^5.9.2"
+  }
+}
