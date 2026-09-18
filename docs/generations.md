@@ -110,6 +110,20 @@ real constraint on the boundary, not a detail: **a class with native methods can
 a generation.** Finding them is mechanical — the dex marks them `ACC_NATIVE` — so this should
 be derived rather than configured.
 
+### The ladder, measured
+
+One save each, same pid, watcher driving:
+
+```
+  ✅ ProbeValues.kt  1234ms                                    body changed, patched
+  ↻ BornAtRuntime.kt  class not loaded yet                     patch refused
+  ♻️ BornAtRuntime.kt  reloaded from a new generation  942ms   published instead
+```
+
+The second file did not exist when the app was installed. Patching is tried first because it
+keeps live objects; the refusal code is what decides, so the CLI never has to work out what
+kind of edit it is looking at.
+
 ### The old generation does not stop by itself
 
 Both reporters above are still logging. RN tears down the modules it owns, but a thread a
@@ -165,10 +179,11 @@ What this costs:
 ## Order of work
 
 1. ~~**Prove the loader.**~~ Done, above.
-2. **Compile a generation.** Reuse what already compiles a module, emit a dex per generation.
+2. ~~**Compile a generation.**~~ Done: `buildGeneration` dexes the whole module, `readManifest`
+   finds the packages it provides and the classes that must stay in the app's loader.
 3. ~~**Drive the reload.**~~ Done, above.
-4. **Fall back honestly.** A change that patching handles should still be patched: it is
-   faster and it keeps objects. Generations are for what patching cannot do.
+4. ~~**Fall back honestly.**~~ Done. Patching runs first; ART's refusal is what chooses the
+   generation, so nothing has to guess which kind of edit it is looking at.
 5. **iOS.** A Swift module per generation, reached through a factory.
 
 Patching does not go away. It becomes the fast path.
