@@ -17,14 +17,14 @@ No plugin, no config and no workaround changes this.
 ## Setup
 
 ```bash
-npx expo install react-native-hotswap
+npx expo install @salve-software/react-native-hotswap
 ```
 
 ```json
 // app.json
 {
   "expo": {
-    "plugins": ["react-native-hotswap"]
+    "plugins": ["@salve-software/react-native-hotswap"]
   }
 }
 ```
@@ -34,7 +34,7 @@ Then the Metro wrapper, which is yours and not generated:
 ```js
 // metro.config.js
 const { getDefaultConfig } = require('expo/metro-config');
-const { withHotswap } = require('react-native-hotswap/metro.cjs');
+const { withHotswap } = require('@salve-software/react-native-hotswap/metro.cjs');
 
 module.exports = withHotswap(getDefaultConfig(__dirname));
 ```

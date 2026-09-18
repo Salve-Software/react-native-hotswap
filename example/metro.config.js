@@ -1,5 +1,7 @@
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
-const { withHotswap } = require('react-native-hotswap/metro.cjs');
+const {
+  withHotswap,
+} = require('@salve-software/react-native-hotswap/metro.cjs');
 const { join } = require('node:path');
 
 /** @type {import('@react-native/metro-config').MetroConfig} */

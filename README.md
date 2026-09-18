@@ -1,6 +1,6 @@
 ![react-native-hotswap](https://raw.githubusercontent.com/Salve-Software/react-native-hotswap/main/assets/banner-hotswap.png)
 
-# react-native-hotswap
+# @salve-software/react-native-hotswap
 
 Fast Refresh covers your JavaScript. This covers the other half: the Kotlin, Swift and C++
 underneath it.
@@ -21,13 +21,13 @@ hotswap  watching android/src/main/java  →  127.0.0.1:8099
 ## Install
 
 ```bash
-npm install --save-dev react-native-hotswap
+npm install --save-dev @salve-software/react-native-hotswap
 ```
 
 Two lines in `metro.config.js`, and Android is done:
 
 ```js
-const { withHotswap } = require('react-native-hotswap/metro.cjs');
+const { withHotswap } = require('@salve-software/react-native-hotswap/metro.cjs');
 
 // `roots` is optional. Pass one per place you keep native code.
 module.exports = withHotswap(mergeConfig(getDefaultConfig(__dirname), config));
@@ -37,7 +37,7 @@ The watcher starts with Metro and the agent attaches when the app launches. Ever
 read out of your Gradle build. There is nothing to add to `build.gradle` and nothing to call
 from your code.
 
-On Expo, add `"react-native-hotswap"` to `plugins` in `app.json` instead of editing native
+On Expo, add `"@salve-software/react-native-hotswap"` to `plugins` in `app.json` instead of editing native
 files by hand, and use a development build. [docs/expo.md](docs/expo.md) covers it.
 
 Swift needs two more lines in the `Podfile`. Without them a Swift method cannot be replaced at
@@ -45,7 +45,7 @@ all:
 
 ```ruby
 require Pod::Executable.execute_command('node', ['-p',
-  'require.resolve("react-native-hotswap/hotswap.rb", {paths: [process.argv[1]]})',
+  'require.resolve("@salve-software/react-native-hotswap/hotswap.rb", {paths: [process.argv[1]]})',
   __dir__]).strip
 
 # inside post_install

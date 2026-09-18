@@ -23,7 +23,7 @@ const SWIFT_HOOK = `
 `;
 
 const PODFILE_REQUIRE = `require Pod::Executable.execute_command('node', ['-p',
-  'require.resolve("react-native-hotswap/hotswap.rb", {paths: [process.argv[1]]})',
+  'require.resolve("@salve-software/react-native-hotswap/hotswap.rb", {paths: [process.argv[1]]})',
   __dir__]).strip`;
 
 /** Expo regenerates the three files this needs a line in, so a plugin has to put them back. */
@@ -58,7 +58,7 @@ function withSwift(config) {
 
     if (!contents.includes(SWIFT_ANCHOR)) {
       throw new Error(
-        'react-native-hotswap: AppDelegate.swift has no config-plugin extension point',
+        '@salve-software/react-native-hotswap: AppDelegate.swift has no config-plugin extension point',
       );
     }
 
@@ -86,7 +86,9 @@ function withPodfile(config) {
       if (contents.includes('hotswap_post_install')) return mod;
 
       if (!contents.includes(PODFILE_ANCHOR)) {
-        throw new Error('react-native-hotswap: the Podfile has no post_install block');
+        throw new Error(
+          '@salve-software/react-native-hotswap: the Podfile has no post_install block',
+        );
       }
 
       contents = `${PODFILE_REQUIRE}\n\n${contents}`.replace(

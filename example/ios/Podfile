@@ -1,5 +1,5 @@
 require Pod::Executable.execute_command('node', ['-p',
-  'require.resolve("react-native-hotswap/hotswap.rb", {paths: [process.argv[1]]})',
+  'require.resolve("@salve-software/react-native-hotswap/hotswap.rb", {paths: [process.argv[1]]})',
   __dir__]).strip
 
 # Resolve react_native_pods.rb with node to allow for hoisting
