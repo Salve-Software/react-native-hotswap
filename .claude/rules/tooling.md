@@ -4,13 +4,14 @@ The package manager is **bun**.
 
 ## Commands
 
-| Command                            | What it does                         |
-| ---------------------------------- | ------------------------------------ |
-| `bun run test` / `test:watch`      | Vitest                               |
-| `bun run lint` / `lint:fix`        | ESLint                               |
-| `bun run format` / `format:check`  | Prettier                             |
-| `bun run clean`                    | `git clean -dfX`                     |
-| `./gradlew :android:assembleDebug` | builds the AAR with the agent inside |
+| Command                            | What it does                             |
+| ---------------------------------- | ---------------------------------------- |
+| `bun run test` / `test:watch`      | Vitest                                   |
+| `bun run lint` / `lint:fix`        | ESLint                                   |
+| `bun run format` / `format:check`  | Prettier                                 |
+| `bun run clean`                    | `git clean -dfX`                         |
+| `hotswap --check`                  | reports what is wired up and what is not |
+| `./gradlew :android:assembleDebug` | builds the AAR with the agent inside     |
 
 ## How a consumer turns it on
 

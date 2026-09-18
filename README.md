@@ -33,6 +33,25 @@ launches, and everything else is derived from your Gradle build.
 
 There is nothing to add to `build.gradle`, and nothing to call from your code.
 
+## When it does not work
+
+```bash
+npx hotswap --check
+```
+
+```
+hotswap  setup
+  ✅ gradle project     example/android
+  ✅ kotlin sources     android/src/main/java
+  ✅ nitro spec         guard is active
+  ✅ android device     adb devices
+  ✅ agent reachable    port 8099
+  ✅ ios workspace      example/ios/UnfoldExample.xcworkspace
+```
+
+`agent reachable` failing usually means the app is not running, or the build was not
+debuggable.
+
 ## What it can change
 
 More than you would expect. ART's structural redefinition — Android 11 and up — is not
