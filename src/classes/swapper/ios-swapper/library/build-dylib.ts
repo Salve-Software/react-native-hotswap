@@ -11,7 +11,6 @@ type Where = Pick<
   'workspace' | 'scheme' | 'derivedData' | 'arch' | 'iosTarget' | 'patchDir'
 >;
 
-/** Turns a changed Swift or C++ file into a dylib the running app can adopt. */
 export function buildDylib(
   path: string,
   { workspace, scheme, derivedData, arch, iosTarget, patchDir }: Where,

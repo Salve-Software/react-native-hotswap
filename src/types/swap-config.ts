@@ -19,5 +19,4 @@ export interface SwapConfig {
   generated: string;
 }
 
-/** The subset a user may override in hotswap.config.json. */
 export type SwapOverrides = Partial<SwapConfig>;

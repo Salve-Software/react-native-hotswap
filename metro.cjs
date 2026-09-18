@@ -3,7 +3,6 @@ const { join } = require('node:path');
 
 let started = false;
 
-/** Starts the watcher alongside Metro, so `react-native start` is the only process. */
 function withHotswap(config, options = {}) {
   if (started || process.env.HOTSWAP === '0') return config;
   started = true;

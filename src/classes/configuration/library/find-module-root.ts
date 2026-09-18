@@ -6,7 +6,6 @@ export function findModuleRoot(from: string): string {
     if (isLibrary(candidate)) return candidate;
   }
 
-  // An app has neither marker and is its own root; refusing to start would be worse.
   return from;
 }
 

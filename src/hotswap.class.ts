@@ -18,7 +18,6 @@ import {
 } from './library/index.js';
 import type { Outcome, Platform, SwapConfig, Swapper } from './types/index.js';
 
-/** The one entry point: reads a project's layout and swaps what it saves into the running app. */
 export class Hotswap {
   readonly config: SwapConfig;
 

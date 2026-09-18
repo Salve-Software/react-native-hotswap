@@ -2,7 +2,6 @@ import type { Platform } from '../types/index.js';
 
 const NATIVE = ['.cpp', '.cc', '.cxx'];
 
-/** Which platforms know how to replace a saved file, if any do. */
 export function platformsFor(path: string): Platform[] {
   if (path.endsWith('.kt')) return ['android'];
   if (path.endsWith('.swift')) return ['ios'];

@@ -13,7 +13,6 @@ import {
 
 const FILE = 'hotswap.config.json';
 
-/** Works out what to compile and where, from the project's own layout and build. */
 export class Configuration {
   static load(root: string): SwapConfig {
     const defaults = Configuration.defaults(root);

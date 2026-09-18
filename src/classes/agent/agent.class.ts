@@ -3,7 +3,6 @@ import { connect } from 'node:net';
 const REPLY = 30000;
 const PROBE = 1500;
 
-/** The half of hotswap that lives inside the running app, reached over a loopback socket. */
 export class Agent {
   constructor(private readonly port: number) {}
 
@@ -11,7 +10,6 @@ export class Agent {
     return new Promise((resolve, reject) => {
       const socket = connect({ host: '127.0.0.1', port: this.port });
 
-      // A malformed message is closed without a reply, so a deadline is the only way out.
       socket.setTimeout(REPLY);
       socket.on('timeout', () => {
         socket.destroy();

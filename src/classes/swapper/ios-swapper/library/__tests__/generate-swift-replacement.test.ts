@@ -4,7 +4,6 @@ import { generateSwiftReplacement } from '../generate-swift-replacement.js';
 const BRIDGE = `import Foundation
 import NitroModules
 
-/** Reads fold geometry from UIKit. */
 class HybridUnfoldBridge: HybridUnfoldBridgeSpec {
 
   func getState() throws -> FoldState {

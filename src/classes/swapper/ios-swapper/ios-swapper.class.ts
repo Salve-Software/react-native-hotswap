@@ -8,7 +8,6 @@ const REASONS: Record<number, string> = {
   2: 'loaded but replaced nothing',
 };
 
-/** Replaces Swift or C++ in the running simulator app, by loading a dylib beside it. */
 export class IosSwapper implements Swapper {
   private readonly agent: Agent;
 

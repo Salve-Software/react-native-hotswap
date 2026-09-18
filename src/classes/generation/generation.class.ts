@@ -4,7 +4,6 @@ import { forwardPort } from '../../library/index.js';
 import type { SwapConfig } from '../../types/index.js';
 import { buildGeneration, readManifest, sendGeneration } from './library/index.js';
 
-/** Rebuilds the module and hands the running app a new set of classes. */
 export class Generation {
   private readonly agent: Agent;
 

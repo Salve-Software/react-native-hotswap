@@ -10,7 +10,6 @@ interface Declaration {
   body: string;
 }
 
-/** Rewrites a Swift file as extensions whose methods dynamically replace the originals. */
 export function generateSwiftReplacement(source: string): string | undefined {
   const extensions = findDeclarations(source)
     .map(toExtension)
