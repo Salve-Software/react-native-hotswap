@@ -20,7 +20,10 @@ internal object HotswapGenerations {
         HotswapGeneration(dexes.map { ByteBuffer.wrap(it) }, packageNames, shared)
       Log.i(TAG, "published a generation providing ${packageNames.size} package(s)")
 
-      val host = HotswapReactHost.current ?: error("the app is not on a hotswap React host")
+      HotswapPackages.refresh()
+
+      val host =
+        HotswapReactHost.running ?: error("no React host to reload; is this a ReactApplication?")
       host.reload("hotswap published a generation")
     }
       .onFailure { Log.e(TAG, "could not publish the generation", it) }

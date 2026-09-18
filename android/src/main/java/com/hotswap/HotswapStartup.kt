@@ -1,5 +1,6 @@
 package com.hotswap
 
+import android.app.Application
 import android.content.ContentProvider
 import android.content.ContentValues
 import android.database.Cursor
@@ -9,7 +10,10 @@ import android.net.Uri
 internal class HotswapStartup : ContentProvider() {
 
   override fun onCreate(): Boolean {
-    context?.let { HotswapNotice.install(it) }
+    context?.let {
+      HotswapNotice.install(it)
+      HotswapReactHost.application = it.applicationContext as? Application
+    }
 
     return true
   }

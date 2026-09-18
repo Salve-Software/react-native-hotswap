@@ -1,6 +1,8 @@
 package com.hotswap
 
+import android.app.Application
 import android.content.Context
+import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactPackage
 import com.facebook.react.ReactPackageTurboModuleManagerDelegate
@@ -21,6 +23,12 @@ public object HotswapReactHost {
 
   internal var current: ReactHost? = null
     private set
+
+  internal var application: Application? = null
+
+  /** The host to reload, whether this library created it or Expo did. */
+  internal val running: ReactHost?
+    get() = current ?: (application as? ReactApplication)?.reactHost
 
   @JvmStatic
   public fun create(context: Context, packages: () -> List<ReactPackage>): ReactHost {
