@@ -6,24 +6,21 @@ import { connect } from 'node:net'
  * Wire format, all big endian: [u32 nameLength][name][u32 dexLength][dex].
  * The reply is a single byte, 0 meaning the class was redefined.
  */
-export function sendRedefinition(
-  target: { className: string; dex: Buffer },
-  port: number,
-): Promise<number> {
+export function sendRedefinition({ className, dex }, port) {
   return new Promise((resolve, reject) => {
     const socket = connect({ host: '127.0.0.1', port })
 
     socket.on('error', reject)
 
     socket.on('connect', () => {
-      const name = Buffer.from(target.className, 'utf8')
-      const header = Buffer.alloc(4)
-      const dexLength = Buffer.alloc(4)
+      const name = Buffer.from(className, 'utf8')
+      const head = Buffer.alloc(4)
+      const size = Buffer.alloc(4)
 
-      header.writeUInt32BE(name.length)
-      dexLength.writeUInt32BE(target.dex.length)
+      head.writeUInt32BE(name.length)
+      size.writeUInt32BE(dex.length)
 
-      socket.write(Buffer.concat([header, name, dexLength, target.dex]))
+      socket.write(Buffer.concat([head, name, size, dex]))
     })
 
     socket.once('data', (reply) => {
