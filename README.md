@@ -85,8 +85,10 @@ refuses and tells you:
 
 ## What it cannot change
 
-- **C++.** Android blocks loading code from app-writable storage, so the C++ half of a Nitro
-  module still needs a rebuild.
+- **C++, and probably never.** Android blocks loading code from app-writable storage, so a
+  recompiled `.so` would need root and an ELF rebinder. The cost is real and the benefit is
+  not: in a Nitro module the C++ is generated from the spec, and a spec change already
+  demands a rebuild. Hand-written C++ HybridObjects would gain, but they are the minority.
 - **iOS.** The plumbing is there and verified — the pod autolinks, the loader runs, a dylib
   built from the pod's own object loads safely — but the replacement does not take effect.
   Nitro dispatches through a C++ vtable, so there is no symbol pointer to rewrite. It reports

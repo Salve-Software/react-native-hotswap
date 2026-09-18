@@ -68,7 +68,8 @@ works and the guarantee is weaker.
   status. Anything richer belongs on the CLI side.
 - **Capabilities are asked for, never assumed.** ART grants a different set per version;
   `GetPotentialCapabilities` decides what to request.
-- **The old `.so` is never unloaded**, only shadowed. `dlclose` on Android rarely unmaps, so
-  any future C++ support loads a new library rather than replacing one.
+- **C++ is out of scope, on purpose.** Loading a recompiled `.so` needs root and an ELF
+  rebinder, and in a Nitro module the C++ is generated from the spec — which already forces a
+  rebuild when it changes. Revisit only if hand-written C++ HybridObjects become common.
 - **Config resolves against the module root**, never `process.cwd()` — Metro runs out of the
   example app.
