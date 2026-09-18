@@ -165,6 +165,39 @@ So on iOS a generation is **a Swift module of its own**, reached through an expo
 and never by name. Cleaner than the Android side, where the collision is real and the parent
 loader has to refuse the apk copy.
 
+### Compiling one, measured on the example
+
+A generation needs the whole module built, not one file, and building it outside Xcode is the
+approach that already failed once for Swift — every missing header search path revealed
+another. It works when the invocation is not reconstructed but **captured**: xcodebuild logs
+the full `swiftc` line, which is the Swift counterpart of `compile_commands.json`.
+
+Replayed against the real pod with nothing changed but the module name:
+
+```
+-module-name probe   ->   -module-name HotswapGen1
+
+_$s11HotswapGen111ProbeValuesC5valueSiyF     the module is part of the mangled name
+_probeSwiftValue                             @_cdecl stays a plain C symbol
+```
+
+The types are genuinely distinct from the app's `probe.ProbeValues`, which is what makes two
+generations safe to hold at once. The factory is reached with `dlsym` on the handle, so the
+duplicate C name across images never has to be resolved globally.
+
+Three things have to come out of the captured line, and one of them is a limit rather than
+housekeeping:
+
+| Dropped | Why |
+| ------- | --- |
+| Xcode's output paths | they point into a build the generation is not part of |
+| `-emit-const-values` and friends | they write where Xcode expects, not where we do |
+| **`-import-underlying-module`** | it looks for an Objective-C module named after `-module-name`, and a generation's name is new every time |
+
+The last one costs something real: Swift that reaches the pod's own Objective-C headers
+through the underlying module will not compile this way. Worth knowing before promising the
+iOS side works for any module.
+
 What this costs:
 
 - **`RCT_EXPORT_MODULE` registers by name at load.** A module RN finds that way gets
