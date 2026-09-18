@@ -1,0 +1,5 @@
+node_modules
+build
+android/.cxx
+android/src/main/cpp/vendor
+gradle
