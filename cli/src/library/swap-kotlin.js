@@ -1,19 +1,10 @@
 import { relative } from 'node:path';
-import { execFileSync } from 'node:child_process';
 import { buildDex } from './build-dex.js';
 import { explainJvmtiError } from './explain-jvmti-error.js';
 import { findStaleSpec } from './find-stale-spec.js';
+import { forwardPort } from './forward-port.js';
 import { readClassName } from './read-class-name.js';
 import { sendRedefinition } from './send-redefinition.js';
-
-/** A device that reconnected drops the forward, and the next swap would time out. */
-function forward(port) {
-  try {
-    execFileSync('adb', ['forward', `tcp:${port}`, `tcp:${port}`], { stdio: 'ignore' });
-  } catch {
-    // No device is a normal state when only iOS is in play.
-  }
-}
 
 /** Swaps one Kotlin file into the running app and reports the outcome. */
 export async function swapKotlin(path, config) {
@@ -30,7 +21,7 @@ export async function swapKotlin(path, config) {
   }
 
   try {
-    forward(config.port);
+    forwardPort(config.port);
 
     const className = readClassName(path);
     const definitions = buildDex({ className, ...config });

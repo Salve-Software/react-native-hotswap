@@ -1,8 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { connect } from 'node:net';
 import { join } from 'node:path';
 import { PATCHES } from './patch-for.js';
+import { reachable } from './reachable.js';
 
 /** Reports what is wired up and what is missing, so setup fails loudly rather than silently. */
 export async function checkSetup(config) {
@@ -93,21 +93,4 @@ function hasDevice() {
   } catch {
     return false;
   }
-}
-
-function reachable(port) {
-  return new Promise((resolve) => {
-    const socket = connect({ host: '127.0.0.1', port });
-
-    socket.setTimeout(1500);
-    socket.on('connect', () => {
-      socket.destroy();
-      resolve(true);
-    });
-    socket.on('error', () => resolve(false));
-    socket.on('timeout', () => {
-      socket.destroy();
-      resolve(false);
-    });
-  });
 }
