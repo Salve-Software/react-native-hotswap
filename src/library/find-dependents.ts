@@ -25,8 +25,7 @@ function reaches(file: string, { wanted, seen }: Search): boolean {
 
   return (
     includes
-      // A quoted include resolves beside the file that wrote it, which is where a project's
-      // own headers live; anything else belongs to a framework and stops the walk.
+      // A quoted include resolves beside the file that wrote it; angled ones stop the walk.
       .map((include) => resolve(dirname(file), include))
       .some((next) => reaches(next, { wanted, seen }))
   );

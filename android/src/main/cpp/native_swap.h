@@ -9,7 +9,6 @@ struct NativeSymbol {
   uint32_t size;
 };
 
-/** Loads a freshly compiled library and points the originals at what it defines. */
 unsigned char hotswapLoadNative(const std::string& filesDir,
                                 const std::vector<unsigned char>& image,
                                 const std::vector<NativeSymbol>& symbols);

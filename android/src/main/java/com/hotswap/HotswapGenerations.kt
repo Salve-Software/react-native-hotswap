@@ -4,7 +4,6 @@ import android.util.Log
 import com.facebook.react.ReactPackage
 import java.nio.ByteBuffer
 
-/** Holds the generation the next React instance will be built from. */
 internal object HotswapGenerations {
 
   private const val TAG = "Hotswap"

@@ -1,7 +1,6 @@
 import { serialize } from '../../library/index.js';
 import { watchSources } from './library/index.js';
 
-/** Watches native sources and hands each settled edit on, one at a time. */
 export class Watcher {
   private readonly queue = serialize();
 

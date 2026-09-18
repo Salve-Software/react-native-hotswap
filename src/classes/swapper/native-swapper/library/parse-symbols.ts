@@ -8,8 +8,7 @@ export function parseSymbols(output: string): NativeSymbol[] {
     const [name, type, , size] = line.trim().split(/\s+/);
     if (!name || !type || !CODE.includes(type)) return [];
 
-    // A symbol with no size recorded is one nm could not measure, and the agent needs the
-    // measurement to know the original has room for a jump.
+    // No size means nm could not measure it, and the agent needs the measurement.
     const room = Number.parseInt(size ?? '', 16);
 
     return Number.isNaN(room) ? [] : [{ name, size: room }];

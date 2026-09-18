@@ -5,7 +5,6 @@ import { basename, dirname, join } from 'node:path';
 import { splitCommand } from './split-command.js';
 import type { CompileCommand } from '../../../../types/index.js';
 
-/** Compiles one changed file into a library the running app can load. */
 export function buildSharedObject(entry: CompileCommand, against: string): string {
   const args = splitCommand(entry.command);
   const compiler = args[0] as string;
@@ -32,8 +31,7 @@ export function buildSharedObject(entry: CompileCommand, against: string): strin
       '-o',
       library,
       object,
-      // Without this the patch has no DT_NEEDED on the library it was cut from, and a
-      // translation unit that calls into the rest of the module fails to load outright.
+      // Without DT_NEEDED on the library it was cut from, the patch will not load.
       `-L${dirname(against)}`,
       `-l${basename(against).replace(/^lib|\.so$/g, '')}`,
     ],

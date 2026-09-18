@@ -21,8 +21,7 @@ export function readCompileCommand(
     );
   }
 
-  // A library reached through node_modules is built along the symlink, so the database
-  // records a path the developer never edits. Both sides resolve before they are compared.
+  // A library reached through node_modules records a path the developer never edits.
   const wanted = real(path);
 
   for (const database of databases) {

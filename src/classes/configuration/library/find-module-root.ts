@@ -1,7 +1,6 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-/** Finds the module to watch, given where Metro was started. */
 export function findModuleRoot(from: string): string {
   for (const candidate of [from, resolve(from, '..')]) {
     if (isLibrary(candidate)) return candidate;

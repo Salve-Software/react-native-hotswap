@@ -26,8 +26,7 @@ ByName definedBy(const HotswapImage &image) {
   return found;
 }
 
-// A patched slot no longer holds the address the symbol table reports, so the next swap
-// would find nothing to overwrite.
+// A patched slot no longer holds the address the symbol table reports.
 ByName installed;
 
 Addresses supersededBy(const ByName &fresh, const mach_header_64 *replacement) {

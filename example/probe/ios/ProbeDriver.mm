@@ -7,7 +7,6 @@
 
 extern "C" int probeSwiftValue(void);
 
-/** Reports what the swap targets currently return, once a second, forever. */
 @interface ProbeDriver : NSObject
 @end
 

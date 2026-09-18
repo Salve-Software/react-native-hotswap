@@ -36,8 +36,7 @@ export class NativeSwapper implements Swapper {
       const original = findNativeLibrary(entry, this.config);
       const library = buildSharedObject(entry, original);
 
-      // The room a jump needs is the original's, not the new one's: an edit that grows a
-      // function would otherwise report space that the running code does not have.
+      // The room is the original's: an edit that grows a function would overstate it.
       const room = new Map(
         readSymbols(original, nm).map(({ name: at, size }) => [at, size]),
       );

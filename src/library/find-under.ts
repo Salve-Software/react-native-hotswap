@@ -16,8 +16,7 @@ export function findUnder(from: string, tail: string[]): string[] {
     found.push(...findUnder(at, tail));
   }
 
-  // A Debug configuration is what the running app was built from; the tools configuration
-  // beside it is generated for the IDE and carries different flags.
+  // The tools configuration beside Debug is for the IDE and carries different flags.
   return found.sort((left, right) => debugFirst(left) - debugFirst(right));
 }
 

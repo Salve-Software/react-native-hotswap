@@ -2,7 +2,6 @@ package com.probe
 
 import android.util.Log
 
-/** Reports what the swap targets currently return, once a second, forever. */
 internal object ProbeReporter {
 
   private var started = false

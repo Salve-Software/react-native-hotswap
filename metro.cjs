@@ -8,8 +8,7 @@ function withHotswap(config, options = {}) {
   if (started || process.env.HOTSWAP === '0') return config;
   started = true;
 
-  // The package ships compiled, but a checkout used straight from git has no lib yet, and
-  // a missing directory reads as a broken tool rather than a build that has not run.
+  // A checkout used straight from git has no lib yet, which reads as a broken tool.
   if (!existsSync(join(__dirname, 'lib'))) {
     console.log(
       'hotswap  off: not built yet, run `bun run build` in react-native-hotswap',

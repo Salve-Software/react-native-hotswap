@@ -20,7 +20,6 @@ struct HotswapSymbols {
   const uint32_t *indirect;
 };
 
-/** Finds the image dyld mapped for a path, or returns false when it is not loaded. */
 bool HotswapFindImage(const char *path, HotswapImage &into);
 
 bool HotswapReadSymbols(const HotswapImage &image, HotswapSymbols &into);

@@ -90,8 +90,7 @@ void* trampolineNear(void* target) {
     return slot;
   }
 
-  // mmap treats the address as a hint and is free to ignore it, so each candidate is
-  // checked rather than trusted, and the search widens until imm26 runs out.
+  // mmap treats the address as a hint and is free to ignore it, so each one is checked.
   for (intptr_t step = static_cast<intptr_t>(page); step < kBranchReach; step <<= 1) {
     for (int sign = 1; sign >= -1; sign -= 2) {
       auto hint = (reinterpret_cast<uintptr_t>(target) + static_cast<uintptr_t>(sign * step)) &
@@ -150,8 +149,7 @@ bool writeJump(void* from, const Replacement& to) {
     }
   }
 
-  // Four bytes is the whole of the shortest function arm64 emits, so with a trampoline in
-  // reach there is no function too small to redirect.
+  // Four bytes is the shortest function arm64 emits, so nothing is too small.
   if (to.room < kNearJump) {
     LOGE("%s is %u bytes, too short to redirect; rebuild", to.name, to.room);
     return false;

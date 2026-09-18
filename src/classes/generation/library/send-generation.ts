@@ -7,7 +7,6 @@ interface Manifest {
   shared: string[];
 }
 
-/** Frames a whole generation the way the agent reads it. */
 export function sendGeneration(dexes: Buffer[], manifest: Manifest): Buffer {
   const names = [...manifest.packages, ...manifest.shared.map((name) => `!${name}`)];
 

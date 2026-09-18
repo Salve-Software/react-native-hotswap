@@ -2,7 +2,6 @@ import { execFileSync } from 'node:child_process';
 import { parseSymbols } from './parse-symbols.js';
 import type { NativeSymbol } from '../../../../types/index.js';
 
-/** Reads the functions a compiled library defines, with the room each one occupies. */
 export function readSymbols(library: string, nm: string): NativeSymbol[] {
   const output = execFileSync(
     nm,

@@ -1,7 +1,6 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-/** The Xcode workspace CocoaPods generated for the app that consumes this module. */
 export function findWorkspace(root: string): string | undefined {
   for (const candidate of ['example/ios', 'ios', '../ios']) {
     const at = join(root, candidate);

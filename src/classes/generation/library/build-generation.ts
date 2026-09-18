@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import { findDexer, findSources } from '../../../library/index.js';
 import type { SwapConfig } from '../../../types/index.js';
 
-/** Compiles the module as it stands now into the dexes a generation is made of. */
 export function buildGeneration(config: SwapConfig): Buffer[] {
   execFileSync('./gradlew', [config.task, '-q'], {
     cwd: config.project,

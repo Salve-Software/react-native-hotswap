@@ -1,4 +1,3 @@
-/** Everything a swap needs to know: what to compile, where from, and where to send it. */
 export interface SwapConfig {
   root: string;
   port: number;

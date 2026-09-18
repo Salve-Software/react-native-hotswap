@@ -1,8 +1,4 @@
-# Adds the flags Swift replacement needs, to debug only.
-#
-# Without -interposable the compiler emits direct calls, and -enable-implicit-dynamic is what
-# makes a method replaceable at all. Both matter on the binary that does the final link, which
-# is the app target in the user's own project, so a podspec cannot reach them.
+# Adds the flags Swift replacement needs, on the final link, which a podspec cannot reach.
 def hotswap_post_install(installer)
   projects = [installer.pods_project] + installer.aggregate_targets.map(&:user_project)
 
@@ -25,8 +21,8 @@ def hotswap_post_install(installer)
   end
 end
 
-# Xcode hands settings back as either an array or one joined string, and checking membership
-# on the string form never matches — which appended the flags again on every pod install.
+# Xcode hands settings back as an array or one joined string, and membership on the
+# string form never matches.
 def hotswap_append(config, key, flags, marker)
   current = config.build_settings[key] || ['$(inherited)']
   current = [current] if current.is_a?(String)

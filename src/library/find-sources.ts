@@ -3,7 +3,6 @@ import { join } from 'node:path';
 
 const TRANSLATION_UNITS = ['.cpp', '.cc', '.cxx', '.mm'];
 
-/** Every file of the given kinds under the given directories. */
 export function findSources(directories: string[], kinds = TRANSLATION_UNITS): string[] {
   return directories.filter((at) => existsSync(at)).flatMap((at) => walk(at, kinds));
 }

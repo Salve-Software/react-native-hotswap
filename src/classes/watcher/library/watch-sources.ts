@@ -5,8 +5,7 @@ import { isSwappable } from '../../../library/is-swappable.js';
 
 const SETTLE = 120;
 
-// The iOS path writes these files itself, and watching them would make every swap trigger
-// another one.
+// The iOS path writes these itself, so watching them would loop.
 const GENERATED = 'HotswapPatch';
 
 /** Calls back once per settled edit, ignoring the burst an editor save produces. */

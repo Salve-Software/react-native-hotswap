@@ -4,7 +4,6 @@ import type { NativeSymbol } from '../../../../types/index.js';
 
 const NATIVE = 1;
 
-/** Frames a compiled library and the functions it redefines, the way the agent reads them. */
 export function sendNative(path: string, symbols: NativeSymbol[]): Buffer {
   const count = Buffer.alloc(4);
   count.writeUInt32BE(symbols.length);
@@ -17,8 +16,7 @@ export function sendNative(path: string, symbols: NativeSymbol[]): Buffer {
   ]);
 }
 
-// The size travels with the name because the agent writes sixteen bytes over the original,
-// and a shorter function would have its neighbour overwritten.
+// The size travels along because the agent needs to know the original has room.
 function frame({ name, size }: NativeSymbol): Buffer {
   const bytes = Buffer.alloc(4);
   bytes.writeUInt32BE(size);
