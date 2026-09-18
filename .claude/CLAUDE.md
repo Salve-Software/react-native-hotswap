@@ -58,27 +58,28 @@ classic `RedefineClasses`. ART's structural extension, present from Android 11, 
 Compose HotSwan moved off JVMTI to an interpreter over exactly this limit; the limit is real
 for the old call and not for the extension.
 
-**iOS loads but does not replace, and the reason is specific.** Everything around the swap
-works and is verified on the simulator: the pod autolinks, the loader listens, a dylib built
-from the pod's own object arrives and opens, and the rebinder is safe — a probe that defines
-nothing the app calls rebinds nothing.
+**iOS replaces live Swift, through dynamic replacement.** Verified on the simulator: editing
+a method, letting the generator rewrite it as `@_dynamicReplacement`, and loading the result
+made the new body run in the same process.
 
-What does not happen is the replacement. The rebinder rewrites indirect symbol pointers, and
-the app never reaches `HybridUnfoldBridge.getState` through one: the caller is Nitro's
-generated C++ bridge, which dispatches through a vtable. `-interposable` does not help,
-because there is no GOT entry naming that symbol to rewrite.
+The mechanism took three attempts and only the third works:
 
-Taking it further means patching Swift class metadata or the vtable, or moving to
-`@_dynamicReplacement` with a source transform. Until then the loader reports status 2 —
-loaded, replaced nothing — and the CLI calls it a failure, because silently running the old
-code is worse than an error.
+| Attempt                                                                          | Outcome                                                              |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Reproduce swiftc's invocation by hand                                            | endless drift; each missing header search path revealed another      |
+| Link the module's objects into a dylib                                           | loads a second copy of the module's Swift metadata and kills the app |
+| **Generate a replacement extension, let Xcode compile it, link that one object** | works                                                                |
 
-Two things that did work and are worth keeping:
+Two constraints that come with it:
 
-|                                   |                                                                                               |
-| --------------------------------- | --------------------------------------------------------------------------------------------- |
-| Let Xcode compile, then link      | reproducing swiftc's invocation is endless drift; the pod's own `.o` already matches          |
-| Link one object, never the module | a dylib carrying the whole module loads a second copy of its Swift metadata and kills the app |
+- **The patch file has to exist before `pod install`.** CocoaPods globs sources at install
+  time, so `ios/HotswapPatch.swift` is created once and rewritten on every save.
+- **Symbol rebinding is not the mechanism.** The rebinder is still there and still safe, but
+  Nitro dispatches through a C++ vtable, so nothing names the Swift method in a way that could
+  be rewritten. `@_dynamicReplacement` goes around that entirely.
+
+A stale replacement wins over a newer one: loading a second dylib that replaces the same
+method leaves the first in place. Restarting the app clears it.
 
 ## Mandatory rules
 

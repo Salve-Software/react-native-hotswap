@@ -157,3 +157,27 @@ size_t HotswapRebindSymbols(void *replacementImage) {
 
   return rebound;
 }
+
+bool HotswapHasReplacements(void *image) {
+  Dl_info info{};
+  void *anchor = dlsym(image, "__mh_dylib_header");
+  if (anchor == nullptr || dladdr(anchor, &info) == 0) return false;
+
+  auto *header = (const mach_header_64 *)info.dli_fbase;
+  auto *command = (const load_command *)((uintptr_t)header + sizeof(mach_header_64));
+
+  for (uint32_t i = 0; i < header->ncmds; i++) {
+    if (command->cmd == LC_SEGMENT_64) {
+      auto *segment = (const segment_command_64 *)command;
+      auto *section = (const section_64 *)((uintptr_t)segment + sizeof(segment_command_64));
+
+      for (uint32_t j = 0; j < segment->nsects; j++, section++) {
+        if (strcmp(section->sectname, "__swift5_replace") == 0) return true;
+      }
+    }
+
+    command = (const load_command *)((uintptr_t)command + command->cmdsize);
+  }
+
+  return false;
+}

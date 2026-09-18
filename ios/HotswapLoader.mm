@@ -30,12 +30,15 @@ static uint8_t loadImage(NSString *path) {
     return 1;
   }
 
+  const bool replaced = HotswapHasReplacements(image);
   size_t rebound = HotswapRebindSymbols(image);
-  NSLog(@"[Hotswap] loaded %@, rebound %zu symbol(s)", path.lastPathComponent, rebound);
+
+  NSLog(@"[Hotswap] loaded %@, %@, rebound %zu symbol(s)", path.lastPathComponent,
+        replaced ? @"swift replacements applied" : @"no swift replacements", rebound);
 
   // Loading without rebinding leaves the old code running, which is worse than a clean
   // failure: the developer sees no error and no change.
-  return rebound > 0 ? 0 : 2;
+  return (replaced || rebound > 0) ? 0 : 2;
 }
 
 static void serveConnection(int client) {

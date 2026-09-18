@@ -21,6 +21,7 @@ export function loadConfig(root) {
     workspace: findWorkspace(root),
     scheme: findPodName(root),
     derivedData: join(root, '.hotswap/derived-data'),
+    patchDir: join(root, 'ios'),
     arch: 'arm64',
     iosTarget: 'arm64-apple-ios15.1-simulator',
     specs: join(root, 'src/specs'),
@@ -30,7 +31,7 @@ export function loadConfig(root) {
   const file = join(root, 'hotswap.config.json');
   const overrides = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
 
-  for (const key of ['project', 'classes', 'specs', 'generated']) {
+  for (const key of ['project', 'classes', 'specs', 'generated', 'patchDir']) {
     if (overrides[key]) overrides[key] = resolve(root, overrides[key]);
   }
 

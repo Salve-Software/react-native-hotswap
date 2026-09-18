@@ -1,17 +1,32 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { generateSwiftReplacement } from './generate-swift-replacement.js';
+
+const PATCH = 'HotswapPatch.swift';
 
 /**
- * Rebuilds the pod through Xcode, then links the changed file's object into a dylib.
+ * Turns a changed Swift file into a dylib the running app can adopt.
  *
- * Reproducing swiftc's invocation is the usual way to do this and it is a source of endless
- * drift; letting Xcode compile means the object already matches the running binary. Only the
- * one object is linked, because a dylib carrying the whole module loads a second copy of its
- * Swift metadata and takes the app down.
+ * The change is written as an extension of dynamic replacements into a file the pod already
+ * globs, so Xcode compiles it with the settings the app was built with. Reproducing swiftc's
+ * invocation is the usual approach and it drifts constantly.
  */
-export function buildDylib(path, { workspace, scheme, derivedData, arch, iosTarget }) {
+export function buildDylib(
+  path,
+  { workspace, scheme, derivedData, arch, iosTarget, patchDir },
+) {
+  const replacement = generateSwiftReplacement(readFileSync(path, 'utf8'));
+  if (!replacement) throw new Error(`${basename(path)} declares no replaceable methods`);
+
+  const patch = join(patchDir, PATCH);
+  if (!existsSync(patch)) {
+    throw new Error(`${patch} is missing; create it and run pod install once`);
+  }
+
+  writeFileSync(patch, replacement);
+
   execFileSync(
     'xcodebuild',
     [
@@ -30,17 +45,15 @@ export function buildDylib(path, { workspace, scheme, derivedData, arch, iosTarg
     { stdio: 'pipe' },
   );
 
-  const object = join(
-    objectsDir(derivedData, scheme, arch),
-    `${basename(path, '.swift')}.o`,
-  );
-  if (!existsSync(object))
-    throw new Error(`xcode produced no object for ${basename(path)}`);
+  return link(objectFor(derivedData, scheme, arch), iosTarget);
+}
 
-  const out = join(
-    mkdtempSync(join(tmpdir(), 'hotswap-')),
-    `${basename(path, '.swift')}.dylib`,
-  );
+/** Only the patch object is linked: a dylib of the whole module loads a second copy of its
+ * Swift metadata and takes the app down. */
+function link(object, iosTarget) {
+  if (!existsSync(object)) throw new Error(`xcode produced no object at ${object}`);
+
+  const out = join(mkdtempSync(join(tmpdir(), 'hotswap-')), 'patch.dylib');
 
   execFileSync(
     'xcrun',
@@ -67,11 +80,12 @@ export function buildDylib(path, { workspace, scheme, derivedData, arch, iosTarg
   return out;
 }
 
-function objectsDir(derivedData, scheme, arch) {
+function objectFor(derivedData, scheme, arch) {
   return join(
     derivedData,
     'Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator',
     `${scheme}.build/Objects-normal/${arch}`,
+    PATCH.replace('.swift', '.o'),
   );
 }
 
