@@ -23,9 +23,11 @@ export function loadConfig(root) {
   const file = join(root, 'hotswap.config.json');
   const overrides = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
 
-  for (const key of ['watch', 'project', 'classes', 'specs', 'generated']) {
+  for (const key of ['project', 'classes', 'specs', 'generated']) {
     if (overrides[key]) overrides[key] = resolve(root, overrides[key]);
   }
+
+  if (overrides.watch) overrides.watch = overrides.watch.map((at) => resolve(root, at));
 
   const merged = { ...defaults, ...fromGradle(defaults.project), ...overrides };
 

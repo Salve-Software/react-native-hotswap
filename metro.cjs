@@ -10,8 +10,11 @@ function withHotswap(config, options = {}) {
 
   const root = options.root ?? findModuleRoot(process.cwd());
 
-  import('./cli/src/library/start-watching.js')
-    .then(({ startWatching }) => startWatching(root))
+  Promise.all([
+    import('./cli/src/library/load-config.js'),
+    import('./cli/src/library/start-watching.js'),
+  ])
+    .then(([{ loadConfig }, { startWatching }]) => startWatching(loadConfig(root)))
     .catch((cause) => console.log(`hotswap  off: ${cause.message.split('\n')[0]}`));
 
   return config;
