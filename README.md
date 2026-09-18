@@ -35,6 +35,9 @@ The watcher starts with Metro and the agent attaches when the app launches. Ever
 read out of your Gradle build. There is nothing to add to `build.gradle` and nothing to call
 from your code.
 
+On Expo, add `"react-native-hotswap"` to `plugins` in `app.json` instead of editing native
+files by hand, and use a development build. [docs/expo.md](docs/expo.md) covers it.
+
 Swift needs two more lines in the `Podfile`. Without them a Swift method cannot be replaced at
 all:
 
@@ -116,6 +119,7 @@ lists on screen.
 
 | Doc                                  | What is in it                                      |
 | ------------------------------------ | -------------------------------------------------- |
+| [Expo](docs/expo.md)                 | the config plugin, and why a dev build is required |
 | [How it works](docs/how-it-works.md) | JVMTI, dynamic replacement, vtables, and prior art |
 | [Generations](docs/generations.md)   | the second mechanism, in full                      |
 | [Limits](docs/limits.md)             | everything that does and does not swap             |
