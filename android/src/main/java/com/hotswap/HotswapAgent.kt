@@ -57,7 +57,6 @@ internal object HotswapAgent {
   }
 
   private fun linkWithoutEquals(context: Context, target: String, name: String): String? {
-    // Debug.attachJvmtiAgent rejects any path containing '='.
     val link = File(context.filesDir, name)
 
     runCatching { Os.remove(link.absolutePath) }

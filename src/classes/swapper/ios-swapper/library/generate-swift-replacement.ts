@@ -28,9 +28,7 @@ function toExtension({ name, body }: Declaration): string | undefined {
   return [`extension ${name} {`, methods.join('\n\n'), '}'].join('\n');
 }
 
-// A nested type is skipped with its parent's body: replacing it would need the qualified
-// name, and scanning the whole file instead once put one type's methods in another's
-// extension.
+// A nested type goes with its parent's body: replacing it needs the qualified name.
 function findDeclarations(source: string): Declaration[] {
   const found: Declaration[] = [];
   const opener =

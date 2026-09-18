@@ -53,6 +53,25 @@ class needs it too — that is what `findUnder`, `forwardPort` and `serialize` e
 
 Native file names follow each language's convention, not this project's.
 
+## Order inside a class
+
+Constructor, then every public member, then every private one. A private method never sits
+between two public ones: reading a class from the top should give its surface before its
+plumbing.
+
+```ts
+class Hotswap {
+  constructor(root: string) {}
+
+  swap(path: string) {} // surface
+  watch() {}
+  check() {}
+
+  private swapOne() {} // plumbing
+  private swapperFor() {}
+}
+```
+
 ## Two parameters maximum
 
 More than two and it takes an object. `buildDex({ className, project, task, classes, minApi,

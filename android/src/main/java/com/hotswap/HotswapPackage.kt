@@ -10,7 +10,6 @@ class HotswapPackage : ReactPackage {
 
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
     HotswapAgent.attach(reactContext)
-    HotswapDrop.watch(reactContext)
 
     return emptyList()
   }

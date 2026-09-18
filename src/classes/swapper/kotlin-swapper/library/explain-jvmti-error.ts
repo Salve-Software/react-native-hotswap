@@ -9,6 +9,14 @@ const REASONS: Record<number, string> = {
   103: 'ART refused the dex; check logcat for FAILURE TO REDEFINE',
 };
 
+// 21 is here because an unloaded class would go on to load the apk's copy.
+const REBUILDABLE = [21, 63, 66, 67, 70, 71];
+
+/** Whether patching cannot carry this edit, and a generation should. */
+export function needsGeneration(code: number): boolean {
+  return REBUILDABLE.includes(code);
+}
+
 /** Turns a jvmtiError into something the developer can act on. */
 export function explainJvmtiError(code: number): string {
   return REASONS[code] ?? `jvmtiError ${code}`;

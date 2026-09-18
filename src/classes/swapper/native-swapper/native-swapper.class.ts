@@ -1,7 +1,7 @@
 import { dirname, join, relative } from 'node:path';
 import { Agent } from '../../agent/index.js';
 import { forwardPort } from '../../../library/index.js';
-import type { SwapConfig, Swapper } from '../../../types/index.js';
+import type { Outcome, SwapConfig, Swapper } from '../../../types/index.js';
 import {
   buildSharedObject,
   findNativeLibrary,
@@ -24,7 +24,7 @@ export class NativeSwapper implements Swapper {
     this.agent = new Agent(config.port);
   }
 
-  async swap(path: string): Promise<boolean> {
+  async swap(path: string): Promise<Outcome> {
     const started = Date.now();
     const name = relative(this.config.root, path);
 
@@ -59,11 +59,11 @@ export class NativeSwapper implements Swapper {
           : `  ❌ ${name}  ${REASONS[status] ?? `status ${status}`}  ${took}ms`,
       );
 
-      return status === 0;
+      return status === 0 ? 'swapped' : 'failed';
     } catch (cause) {
       console.log(`  ❌ ${name}  ${(cause as Error).message.split('\n')[0]}`);
 
-      return false;
+      return 'failed';
     }
   }
 }

@@ -1,6 +1,6 @@
 import { relative } from 'node:path';
 import { Agent } from '../../agent/index.js';
-import type { SwapConfig, Swapper } from '../../../types/index.js';
+import type { Outcome, SwapConfig, Swapper } from '../../../types/index.js';
 import { buildDylib, sendImage } from './library/index.js';
 
 const REASONS: Record<number, string> = {
@@ -16,7 +16,7 @@ export class IosSwapper implements Swapper {
     this.agent = new Agent(config.iosPort);
   }
 
-  async swap(path: string): Promise<boolean> {
+  async swap(path: string): Promise<Outcome> {
     const started = Date.now();
     const name = relative(this.config.root, path);
 
@@ -31,11 +31,11 @@ export class IosSwapper implements Swapper {
           : `  ❌ ${name}  ${REASONS[error] ?? `status ${error}`}  ${took}ms`,
       );
 
-      return error === 0;
+      return error === 0 ? 'swapped' : 'failed';
     } catch (cause) {
       console.log(`  ❌ ${name}  ${(cause as Error).message.split('\n')[0]}`);
 
-      return false;
+      return 'failed';
     }
   }
 }

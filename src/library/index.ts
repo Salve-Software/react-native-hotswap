@@ -1,5 +1,6 @@
 export { checkSetup } from './check-setup.js';
 export { findDependents } from './find-dependents.js';
+export { findDexer } from './find-dexer.js';
 export { findSources } from './find-sources.js';
 export { findUnder } from './find-under.js';
 export { isSwappable } from './is-swappable.js';

@@ -15,13 +15,7 @@ import com.facebook.react.runtime.ReactHostDelegate
 import com.facebook.react.runtime.ReactHostImpl
 import com.facebook.react.runtime.hermes.HermesInstance
 
-/**
- * A React host that asks for its packages again every time it builds an instance.
- *
- * getDefaultReactHost takes the list once and keeps it, so a reload rebuilds the instance
- * from the same classes it was built from before. Reading it per instance is what lets a
- * generation replace them.
- */
+/** A React host that reads its packages again for every instance it builds. */
 @OptIn(UnstableReactNativeAPI::class)
 public object HotswapReactHost {
 

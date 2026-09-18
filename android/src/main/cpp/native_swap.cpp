@@ -77,12 +77,7 @@ struct Arena {
 
 std::vector<Arena> gArenas;
 
-/**
- * Finds sixteen bytes of executable memory a four-byte branch can reach from the original.
- *
- * The patch library is mapped wherever the linker likes, which is routinely further than
- * imm26 covers, and the far jump needs sixteen bytes that a small function does not have.
- */
+// The patch library lands routinely further than imm26 reaches.
 void* trampolineNear(void* target) {
   const size_t page = static_cast<size_t>(getpagesize());
 

@@ -22,6 +22,7 @@ namespace {
 constexpr int kDefaultPort = 8099;
 constexpr unsigned char kClasses = 0;
 constexpr unsigned char kNative = 1;
+constexpr unsigned char kGeneration = 2;
 constexpr const char* kStructuralRedefine =
     "com.android.art.class.structurally_redefine_classes";
 
@@ -63,8 +64,10 @@ class LoadedClasses {
     if (classes_ != nullptr) gJvmti->Deallocate(reinterpret_cast<unsigned char*>(classes_));
   }
 
-  jclass find(const std::string& className) const {
+  // Every copy: a generation loads the same class again, under its own loader.
+  std::vector<jclass> find(const std::string& className) const {
     const std::string wanted = "L" + className + ";";
+    std::vector<jclass> found;
 
     for (jint i = 0; i < count_; i++) {
       char* signature = nullptr;
@@ -75,10 +78,10 @@ class LoadedClasses {
       const bool match = signature != nullptr && wanted == signature;
       gJvmti->Deallocate(reinterpret_cast<unsigned char*>(signature));
 
-      if (match) return classes_[i];
+      if (match) found.push_back(classes_[i]);
     }
 
-    return nullptr;
+    return found;
   }
 
  private:
@@ -104,19 +107,21 @@ jvmtiError redefine(const std::vector<Definition>& definitions) {
     classes.reserve(definitions.size());
 
     for (const Definition& definition : definitions) {
-      jclass target = loaded.find(definition.className);
+      const std::vector<jclass> targets = loaded.find(definition.className);
 
       // A class not reached yet will load from the dex on disk, so skipping beats failing.
-      if (target == nullptr) {
+      if (targets.empty()) {
         LOGI("skipping %s, not loaded yet", definition.className.c_str());
         continue;
       }
 
-      jvmtiClassDefinition entry{};
-      entry.klass = target;
-      entry.class_byte_count = static_cast<jint>(definition.dex.size());
-      entry.class_bytes = definition.dex.data();
-      classes.push_back(entry);
+      for (jclass target : targets) {
+        jvmtiClassDefinition entry{};
+        entry.klass = target;
+        entry.class_byte_count = static_cast<jint>(definition.dex.size());
+        entry.class_bytes = definition.dex.data();
+        classes.push_back(entry);
+      }
     }
 
     if (!classes.empty()) {
@@ -190,6 +195,84 @@ bool serveClasses(int client, unsigned char& reply) {
   return true;
 }
 
+unsigned char publishGeneration(const std::vector<std::vector<unsigned char>>& dexes,
+                                const std::vector<std::string>& names) {
+  JNIEnv* env = nullptr;
+  if (gVm->AttachCurrentThread(&env, nullptr) != JNI_OK) return 1;
+
+  unsigned char reply = 1;
+  {
+    LoadedClasses loaded(env);
+    const std::vector<jclass> found = loaded.find("com/hotswap/HotswapGenerations");
+    jclass generations = found.empty() ? nullptr : found.front();
+
+    if (generations == nullptr) {
+      LOGE("HotswapGenerations is not loaded; is the app on a hotswap React host?");
+    } else {
+      jmethodID publish =
+          env->GetStaticMethodID(generations, "publish", "([[B[Ljava/lang/String;)Z");
+
+      if (publish == nullptr) {
+        env->ExceptionClear();
+        LOGE("HotswapGenerations.publish is missing");
+      } else {
+        jobjectArray dexArray =
+            env->NewObjectArray(static_cast<jsize>(dexes.size()), env->FindClass("[B"), nullptr);
+        for (size_t i = 0; i < dexes.size(); i++) {
+          jbyteArray one = env->NewByteArray(static_cast<jsize>(dexes[i].size()));
+          env->SetByteArrayRegion(one, 0, static_cast<jsize>(dexes[i].size()),
+                                  reinterpret_cast<const jbyte*>(dexes[i].data()));
+          env->SetObjectArrayElement(dexArray, static_cast<jsize>(i), one);
+          env->DeleteLocalRef(one);
+        }
+
+        jobjectArray nameArray = env->NewObjectArray(
+            static_cast<jsize>(names.size()), env->FindClass("java/lang/String"), nullptr);
+        for (size_t i = 0; i < names.size(); i++) {
+          jstring one = env->NewStringUTF(names[i].c_str());
+          env->SetObjectArrayElement(nameArray, static_cast<jsize>(i), one);
+          env->DeleteLocalRef(one);
+        }
+
+        reply = env->CallStaticBooleanMethod(generations, publish, dexArray, nameArray) ? 0 : 1;
+
+        env->DeleteLocalRef(dexArray);
+        env->DeleteLocalRef(nameArray);
+      }
+    }
+  }
+
+  gVm->DetachCurrentThread();
+
+  return reply;
+}
+
+bool serveGeneration(int client, unsigned char& reply) {
+  uint32_t dexCount = 0;
+  if (!readExactly(client, &dexCount, sizeof(dexCount))) return false;
+  dexCount = ntohl(dexCount);
+  if (dexCount == 0 || dexCount > 64) return false;
+
+  std::vector<std::vector<unsigned char>> dexes(dexCount);
+  for (uint32_t i = 0; i < dexCount; i++) {
+    if (!readBytes(client, dexes[i])) return false;
+  }
+
+  uint32_t nameCount = 0;
+  if (!readExactly(client, &nameCount, sizeof(nameCount))) return false;
+  nameCount = ntohl(nameCount);
+  if (nameCount == 0 || nameCount > 1024) return false;
+
+  std::vector<std::string> names(nameCount);
+  for (uint32_t i = 0; i < nameCount; i++) {
+    if (!readString(client, names[i])) return false;
+  }
+
+  reply = publishGeneration(dexes, names);
+
+  return true;
+}
+
 bool serveNative(int client, const std::string& filesDir, unsigned char& reply) {
   std::vector<unsigned char> image;
   if (!readBytes(client, image)) return false;
@@ -217,11 +300,13 @@ void serveConnection(int client, const std::string& filesDir) {
   while (true) {
     unsigned char kind = 0;
     if (!readExactly(client, &kind, sizeof(kind))) return;
-    if (kind != kClasses && kind != kNative) return;
+    if (kind != kClasses && kind != kNative && kind != kGeneration) return;
 
     unsigned char reply = 0;
-    const bool served = kind == kNative ? serveNative(client, filesDir, reply)
-                                        : serveClasses(client, reply);
+    bool served = false;
+    if (kind == kGeneration) served = serveGeneration(client, reply);
+    else if (kind == kNative) served = serveNative(client, filesDir, reply);
+    else served = serveClasses(client, reply);
     if (!served) return;
     if (send(client, &reply, 1, 0) != 1) return;
   }

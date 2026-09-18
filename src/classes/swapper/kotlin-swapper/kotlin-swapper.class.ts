@@ -1,10 +1,11 @@
 import { relative } from 'node:path';
 import { Agent } from '../../agent/index.js';
 import { forwardPort } from '../../../library/index.js';
-import type { SwapConfig, Swapper } from '../../../types/index.js';
+import type { Outcome, SwapConfig, Swapper } from '../../../types/index.js';
 import {
   buildDex,
   explainJvmtiError,
+  needsGeneration,
   findStaleSpec,
   readClassName,
   sendRedefinition,
@@ -18,7 +19,7 @@ export class KotlinSwapper implements Swapper {
     this.agent = new Agent(config.port);
   }
 
-  async swap(path: string): Promise<boolean> {
+  async swap(path: string): Promise<Outcome> {
     const started = Date.now();
     const name = relative(this.config.root, path);
 
@@ -27,7 +28,7 @@ export class KotlinSwapper implements Swapper {
       const spec = relative(this.config.root, stale);
       console.log(`  ⛔ ${name}  ${spec} changed; run codegen and rebuild`);
 
-      return false;
+      return 'failed';
     }
 
     try {
@@ -39,17 +40,25 @@ export class KotlinSwapper implements Swapper {
       const took = Date.now() - started;
       const extra = definitions.length > 1 ? ` +${definitions.length - 1}` : '';
 
-      console.log(
-        error === 0
-          ? `  ✅ ${name}${extra}  ${took}ms`
-          : `  ❌ ${name}  ${explainJvmtiError(error)}  ${took}ms`,
-      );
+      if (error === 0) {
+        console.log(`  ✅ ${name}${extra}  ${took}ms`);
 
-      return error === 0;
+        return 'swapped';
+      }
+
+      if (needsGeneration(error)) {
+        console.log(`  ↻ ${name}  ${explainJvmtiError(error)}`);
+
+        return 'needs-generation';
+      }
+
+      console.log(`  ❌ ${name}  ${explainJvmtiError(error)}  ${took}ms`);
+
+      return 'failed';
     } catch (cause) {
       console.log(`  ❌ ${name}  ${(cause as Error).message.split('\n')[0]}`);
 
-      return false;
+      return 'failed';
     }
   }
 }

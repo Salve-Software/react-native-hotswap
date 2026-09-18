@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs';
-import { homedir, tmpdir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
+import { findDexer } from '../../../../library/find-dexer.js';
 import type { ClassDefinition, SwapConfig } from '../../../../types/index.js';
 
 type Options = Pick<
@@ -40,7 +41,7 @@ export function buildDex({
 
   const out = mkdtempSync(join(tmpdir(), 'hotswap-'));
   execFileSync(
-    dexer(buildTools),
+    findDexer(buildTools),
     ['--min-api', String(minApi), '--file-per-class', '--output', out, ...targets],
     { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 },
   );
@@ -69,20 +70,4 @@ function collectDexes(out: string): ClassDefinition[] {
   walk(out);
 
   return found;
-}
-
-// d8 37 widens private lambda methods, which ART refuses as a flag mismatch.
-function dexer(buildTools: string | undefined): string {
-  const sdk = process.env['ANDROID_HOME'] ?? join(homedir(), 'Library/Android/sdk');
-  const tools = join(sdk, 'build-tools');
-  const installed = readdirSync(tools).sort();
-
-  const chosen =
-    buildTools && installed.includes(buildTools)
-      ? buildTools
-      : installed.filter((v) => parseInt(v, 10) <= 36).pop();
-
-  if (!chosen) throw new Error('no build-tools 36 or lower installed');
-
-  return join(tools, chosen, 'd8');
 }

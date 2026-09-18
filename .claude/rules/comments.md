@@ -50,4 +50,17 @@ A native symbol **is written exactly as it is**, so it can be found by search.
 `TODO(sdk):` marking what depends on a platform piece that is not built yet. Today that is the
 iOS side.
 
+## The check
+
+Two things are mechanical, and both have been broken more than once:
+
+```bash
+# no comment spans more than one line
+# no /** is indented — an indented one is sitting on a method, which is not one of the three places
+grep -rn "^\s\+/\*\*" src android/src ios | grep -v __tests__
+```
+
+A paragraph explaining a decision does not belong in the file at all. It goes in the commit
+message, where it is read once by someone deciding whether the decision still holds.
+
 When in doubt, do not comment.

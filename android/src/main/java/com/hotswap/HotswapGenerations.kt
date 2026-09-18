@@ -2,7 +2,7 @@ package com.hotswap
 
 import android.util.Log
 import com.facebook.react.ReactPackage
-import java.io.File
+import java.nio.ByteBuffer
 
 /** Holds the generation the next React instance will be built from. */
 internal object HotswapGenerations {
@@ -11,12 +11,14 @@ internal object HotswapGenerations {
 
   @Volatile private var current: HotswapGeneration? = null
 
-  fun publish(dex: File, manifest: List<String>): Boolean =
+  @JvmStatic
+  fun publish(dexes: Array<ByteArray>, manifest: Array<String>): Boolean =
     runCatching {
       val packageNames = manifest.filterNot { it.startsWith("!") }
       val shared = manifest.filter { it.startsWith("!") }.map { it.drop(1) }
 
-      current = HotswapGeneration(dex, packageNames, shared)
+      current =
+        HotswapGeneration(dexes.map { ByteBuffer.wrap(it) }, packageNames, shared)
       Log.i(TAG, "published a generation providing ${packageNames.size} package(s)")
 
       val host = HotswapReactHost.current ?: error("the app is not on a hotswap React host")
@@ -25,7 +27,6 @@ internal object HotswapGenerations {
       .onFailure { Log.e(TAG, "could not publish the generation", it) }
       .isSuccess
 
-  /** Replaces the packages the generation owns, and leaves the rest of the app's alone. */
   fun merge(base: List<ReactPackage>): List<ReactPackage> {
     val generation = current ?: return base
 
