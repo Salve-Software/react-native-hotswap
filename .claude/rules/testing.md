@@ -19,6 +19,7 @@ that is unit tested, and mocking it would only prove the mock works.
 | `agent.cpp`                    | the same, reading logcat                      |
 | `ios/`, the Swift path         | the simulator, reading the unified log        |
 | `metro.cjs`                    | starting Metro and watching for the swap line |
+| `findModuleRoot`               | running it against a library and its example  |
 
 **Every pure function exported from `library/` has a test.** When a function is hard to test,
 split the decision from the effect rather than reaching for a mock — that is how
