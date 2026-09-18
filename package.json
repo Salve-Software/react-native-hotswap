@@ -28,7 +28,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "git clean -dfX"
+    "clean": "git clean -dfX",
+    "release": "semantic-release"
   },
   "keywords": [
     "react-native",
@@ -59,12 +60,16 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@semantic-release/changelog": "^7.0.0",
+    "@semantic-release/git": "^11.0.1",
     "@types/node": "^22.10.2",
+    "conventional-changelog-conventionalcommits": "^10.4.0",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import-x": "^4.17.1",
     "prettier": "^3.9.8",
     "react-native": "0.76.5",
+    "semantic-release": "^25.0.9",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.70.0",
     "vitest": "^5.0.1"

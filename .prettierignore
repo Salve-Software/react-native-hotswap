@@ -3,3 +3,7 @@ build
 android/.cxx
 android/src/main/cpp/vendor
 gradle
+
+# semantic-release writes it, and reformatting it would fight the next release
+CHANGELOG.md
+example/Gemfile.lock
