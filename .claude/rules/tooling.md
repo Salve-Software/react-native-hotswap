@@ -126,14 +126,21 @@ Releases are **manual by design**: `workflow_dispatch`, never on push. A tool th
 running app should not publish itself the moment someone merges.
 
 `release.config.cjs` maps each commit type to a bump and a changelog section. `test`, `ci` and
-`style` carry `release: false` — they appear in the notes of a release something else
-triggered, and never trigger one alone.
+`style` carry `release: false`, so they appear in the notes of a release something else
+triggered and never trigger one alone.
 
-Two things the pipeline needs that live outside this repository:
+There is no `NPM_TOKEN`. Publishing goes through npm's trusted publishing, so the job asks
+GitHub for an OIDC token and npm exchanges it. That needs three things:
 
-- **`NPM_TOKEN`** as a repository secret, for `@semantic-release/npm`.
-- **A remote.** There is none yet, so nothing here has ever run. `bunx semantic-release
---dry-run --no-ci` fails at `git ls-remote` and that is the only reason.
+- **`id-token: write`** on the job, which it has.
+- **A trusted publisher on npmjs.com** for this package, pointing at this repository and
+  `release.yml`.
+- **A recent npm on the runner.** `@semantic-release/npm` uses the OIDC context only to skip
+  its own token check; the exchange happens inside `npm publish`, and the runner image ships an
+  npm too old for it. The job upgrades npm first.
+
+What is still missing is a **remote**. There is none yet, so nothing here has ever run. `bunx
+semantic-release --dry-run --no-ci` fails at `git ls-remote`, and that is the only reason.
 
 The example installs with **npm**, not bun: it links the library with `file:..` and keeps its
 own `package-lock.json`. CI installs the library with bun first, because npm has to find
