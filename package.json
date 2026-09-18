@@ -12,6 +12,7 @@
     "android/CMakeLists.txt",
     "ios",
     "gradle/hotswap-config.gradle",
+    "app.plugin.js",
     "metro.cjs",
     "hotswap.rb",
     "*.podspec",
@@ -60,6 +61,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@expo/config-plugins": "^57.0.9",
     "@semantic-release/changelog": "^7.0.0",
     "@semantic-release/git": "^11.0.1",
     "@types/node": "^22.10.2",
@@ -83,7 +85,8 @@
     },
     "./metro.cjs": "./metro.cjs",
     "./hotswap.rb": "./hotswap.rb",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./app.plugin.js": "./app.plugin.js"
   },
   "types": "./lib/index.d.ts"
 }
