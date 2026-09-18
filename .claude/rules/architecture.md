@@ -1,12 +1,14 @@
 # Architecture
 
-Two halves that never share a process, joined by a socket.
+Two halves that never share a process, joined by a socket, and two mechanisms that share
+nothing but that shape.
 
 ```
-dev machine                        device
-───────────                        ──────
-cli/     watch → compile → dex  ─→  agent.cpp  → ART redefines the class
-metro.cjs  starts the watcher       HotswapPackage attaches the agent
+dev machine                          device
+───────────                          ──────
+cli/  watch → gradle → d8        ─→  agent.cpp        → ART redefines the classes
+cli/  watch → generate → xcode   ─→  HotswapLoader.mm → dyld loads, swift replaces
+metro.cjs  starts the watcher
 ```
 
 ## The split is not negotiable
@@ -62,8 +64,12 @@ works and the guarantee is weaker.
 
 ## Maintenance rules
 
-- **A new platform is a new mechanism, not a new branch.** iOS uses dylib interposing, which
-  shares nothing with JVMTI beyond the watcher. Keep them apart.
+- **A platform is a mechanism, not a branch.** Android redefines classes through JVMTI; iOS
+  loads a dylib of `@_dynamicReplacement` methods and lets the Swift runtime do the swap.
+  `platformFor` routes, and nothing below it is shared.
+- **Let the platform's own compiler produce the bytes.** Gradle dexes what it dexed before,
+  Xcode compiles with the settings the app was built with. Reproducing either invocation by
+  hand drifts, and the drift shows up as a redefinition the runtime rejects.
 - **The agent never grows a protocol it does not need.** One request, one reply, one byte of
   status. Anything richer belongs on the CLI side.
 - **Capabilities are asked for, never assumed.** ART grants a different set per version;

@@ -17,6 +17,7 @@ that is unit tested, and mocking it would only prove the mock works.
 | `library/` pure functions      | Vitest                                        |
 | `buildDex`, `sendRedefinition` | running the tool against the example app      |
 | `agent.cpp`                    | the same, reading logcat                      |
+| `ios/`, the Swift path         | the simulator, reading the unified log        |
 | `metro.cjs`                    | starting Metro and watching for the swap line |
 
 **Every pure function exported from `library/` has a test.** When a function is hard to test,
@@ -63,3 +64,12 @@ The check is:
 The app must report `posture: closed`, which the Android implementation can never produce on
 its own, in the same pid. That single observation covers the agent, the protocol, the dexing
 and the class lookup at once.
+
+For Swift, add an `NSLog` to a method and watch for it after a save:
+
+```bash
+xcrun simctl spawn <device> log show --last 30s --predicate 'eventMessage CONTAINS "Hotswap"'
+```
+
+The line to look for is `swift replacements applied`. `no swift replacements` means the dylib
+loaded and changed nothing, which the CLI reports as a failure.
