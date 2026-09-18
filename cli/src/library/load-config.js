@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { resolveOverrides } from './resolve-overrides.js';
 import { findPodName } from './find-pod-name.js';
 import { findWorkspace } from './find-workspace.js';
+import { readDeviceAbi } from './read-device-abi.js';
 import { readGradleConfig } from './read-gradle-config.js';
 import { readXcodeConfig } from './read-xcode-config.js';
 
@@ -17,6 +18,7 @@ export function loadConfig(root) {
     iosPort: 8100,
     minApi: 24,
     buildTools: undefined,
+    abi: readDeviceAbi(),
     watch: app
       ? [join(root, 'android/app/src/main/java')]
       : [join(root, 'android/src/main/java'), join(root, 'ios'), join(root, 'cpp')],
