@@ -15,13 +15,14 @@ export function loadConfig(root) {
     project: findGradle(root),
     task: `:${pkg.name}:compileDebugKotlin`,
     classes: join(root, 'android/build/tmp/kotlin-classes/debug'),
-    abort: join(root, 'src/specs'),
+    specs: join(root, 'src/specs'),
+    generated: join(root, 'nitrogen/generated'),
   };
 
   const file = join(root, 'hotswap.config.json');
   const overrides = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
 
-  for (const key of ['watch', 'project', 'classes', 'abort']) {
+  for (const key of ['watch', 'project', 'classes', 'specs', 'generated']) {
     if (overrides[key]) overrides[key] = resolve(root, overrides[key]);
   }
 

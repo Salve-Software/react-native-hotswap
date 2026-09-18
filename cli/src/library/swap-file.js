@@ -1,5 +1,6 @@
 import { relative } from 'node:path';
 import { buildDex } from './build-dex.js';
+import { findStaleSpec } from './find-stale-spec.js';
 import { readClassName } from './read-class-name.js';
 import { sendRedefinition } from './send-redefinition.js';
 
@@ -7,6 +8,15 @@ import { sendRedefinition } from './send-redefinition.js';
 export async function swapFile(path, config) {
   const started = Date.now();
   const name = relative(config.root, path);
+
+  const stale = findStaleSpec(config.specs, config.generated);
+  if (stale) {
+    console.log(
+      `  ⛔ ${name}  ${relative(config.root, stale)} changed; run codegen and rebuild`,
+    );
+
+    return false;
+  }
 
   try {
     const className = readClassName(path);
