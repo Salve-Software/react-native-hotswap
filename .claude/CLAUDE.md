@@ -59,6 +59,7 @@ None of this is in any documentation, and each line cost hours:
 | Swift's `@objc` name carries the module                                                              | which is what makes two generations distinct types rather than a collision                            |
 | `RCTReactNativeFactoryDelegate` conforms to `RCTTurboModuleManagerDelegate` only under `__cplusplus` | Swift cannot `override` the hook; the selector is written out                                         |
 | CocoaPods globs sources at install time                                                              | a file created later is invisible until the next `pod install` — this has bitten three times          |
+| React builds its packages after the first `onResume`                                                 | anything registered from a package misses it; the banner installs from a `ContentProvider`            |
 
 ## State
 
@@ -81,6 +82,9 @@ TurboModule called from JS: `Probe module comes from: generation (246810)`, wher
 comes from a method that did not exist at install time.
 
 **Headers.** Editing a `.h` swaps every translation unit that reaches it.
+
+**On screen.** Every successful swap draws a banner over the running app, from the first one
+of a fresh process. Measured on both the emulator and the simulator, by save and by hand.
 
 ## What is not true, or not known
 

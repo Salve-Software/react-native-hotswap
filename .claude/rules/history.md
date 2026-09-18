@@ -71,6 +71,18 @@ is running is the only thing that knows what is loaded.
 | `RCT_EXTERN_MODULE` so the class registers itself                       | registers in React Native's global registry, and the delegate is then never asked |
 | **Objective-C++ conformance, logic in a Swift class asked for by name** | works                                                                             |
 
+## Getting an Activity to draw a banner on
+
+| Attempt                                                           | What happened                                               |
+| ----------------------------------------------------------------- | ----------------------------------------------------------- |
+| `registerActivityLifecycleCallbacks` from the agent's attach path | React builds its packages after `onResume`, so it is missed |
+| Seed from `ReactContext.currentActivity` at package creation      | still null in bridgeless at that point                      |
+| **A `ContentProvider` in the AAR manifest**                       | runs before any Activity, so every resume is seen           |
+
+Both failures look identical from the terminal: the swap succeeds, the reply byte is 0, and
+nothing appears. The first notice of a fresh process is the case to test, because every later
+one works by then.
+
 ## Claims that were written here and were false
 
 Kept because each was believed, written down, and only disproved by measuring:

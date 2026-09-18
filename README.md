@@ -150,6 +150,20 @@ The graph is built from quoted includes across the watched directories, followed
 other headers. An angled include belongs to a framework and stops the walk. A translation
 unit outside the watched directories is not reached, which is the case worth knowing.
 
+## On screen
+
+A swap you have to go looking for in a terminal is a swap you stop trusting. Every successful
+one draws a short banner over the running app, the way Metro does for JavaScript:
+
+```
+hotswap · ProbeValues.kt
+hotswap · ProbeValues.kt · reloaded      ← a generation, so React rebuilt its instance
+```
+
+It is drawn by hotswap itself rather than by React Native's dev UI, so it needs no integration
+and says the same thing on both platforms. Nothing is drawn when a swap fails — the terminal
+carries the reason, and a banner that appears either way teaches you to ignore it.
+
 ## When it does not work
 
 ```bash

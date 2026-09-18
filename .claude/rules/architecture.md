@@ -12,6 +12,7 @@ src/  watch → generate → xcode     ─→  HotswapLoader.mm → dyld loads, 
 src/  watch → include → xcode      ─→  HotswapLoader.mm → rebind + patch vtables
 src/  watch → gradle → d8 (whole)  ─→  HotswapGenerations.kt → a loader of its own, reload
 src/  watch → swiftc (whole)       ─→  HotswapGenerations.mm → dlopen, factory, reload
+src/  after any success            ─→  HotswapNotice.kt / .mm → a banner over the app
 metro.cjs  starts the watcher, one per root
 ```
 
@@ -66,21 +67,25 @@ React Native already does, which is why both integrations are one line:
 Without them, patching still works and generations do not. That is the whole cost of the
 integration, and it is stated that way in the README.
 
+The banner asks for nothing at all. Android installs it from a `ContentProvider` in the AAR's
+manifest, which runs before any Activity exists; iOS puts it in a `UIWindow` of its own above
+the app's, so a generation's reload does not take it down with the React instance.
+
 ## What each folder holds
 
-| Folder                   | What it is                                                           |
-| ------------------------ | -------------------------------------------------------------------- |
-| `android/src/main/cpp/`  | the JVMTI agent, the C++ redirector, and the vendored ART header     |
-| `android/src/main/java/` | attach path, generation loader, and the React host                   |
-| `ios/`                   | the loader, the Mach-O rebinder, and the generation registry         |
-| `src/bin.ts`             | the executable entry point, argument handling only                   |
-| `src/hotswap.class.ts`   | the facade both entry points go through                              |
-| `src/classes/`           | agent, configuration, watcher, generation, one swapper per mechanism |
-| `src/library/`           | the helpers more than one class needs                                |
-| `gradle/`                | the init script that reads the app's minSdk and build-tools          |
-| `metro.cjs`              | starts the watcher inside Metro so there is no second process        |
-| `example/`               | the app; `example/probe` is the module. Both are swap fixtures       |
-| `docs/generations.md`    | the long form of the generation design, with measurements            |
+| Folder                   | What it is                                                          |
+| ------------------------ | ------------------------------------------------------------------- |
+| `android/src/main/cpp/`  | the JVMTI agent, the C++ redirector, and the vendored ART header    |
+| `android/src/main/java/` | attach path, generation loader, and the React host                  |
+| `ios/`                   | the loader, the Mach-O rebinder, and the generation registry        |
+| `src/bin.ts`             | the executable entry point, argument handling only                  |
+| `src/hotswap.class.ts`   | the facade both entry points go through                             |
+| `src/classes/`           | agent, configuration, watcher, generation, notice, one swapper each |
+| `src/library/`           | the helpers more than one class needs                               |
+| `gradle/`                | the init script that reads the app's minSdk and build-tools         |
+| `metro.cjs`              | starts the watcher inside Metro so there is no second process       |
+| `example/`               | the app; `example/probe` is the module. Both are swap fixtures      |
+| `docs/generations.md`    | the long form of the generation design, with measurements           |
 
 ## Maintenance rules
 
@@ -89,7 +94,10 @@ integration, and it is stated that way in the README.
 - **Let the platform's own compiler produce the bytes**, and capture its invocation rather
   than reconstructing it. Reconstruction drifts; see `rules/history.md`.
 - **The agent never grows a protocol it does not need.** A kind byte, a payload, one byte of
-  status.
+  status. The notice kind earns its place by being the only way the developer sees a swap
+  without reading the terminal.
+- **The device draws what it is handed.** The banner's wording is built in the CLI, so it is
+  written once instead of once per language.
 - **Capabilities are asked for, never assumed.** ART grants a different set per version.
 - **A call is reached two ways, and only one names a symbol.** A virtual call reads the
   vtable. Patching at the callee's entry sidesteps the distinction, which is why the Android

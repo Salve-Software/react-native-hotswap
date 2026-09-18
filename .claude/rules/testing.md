@@ -106,6 +106,22 @@ That one covers the most ground of any check here: JS calls a codegen'd TurboMod
 Native resolves it through the delegate, and the value comes from a method that did not exist
 when the app was installed.
 
+### The banner
+
+It lasts 1.4s, so a screenshot taken after the fact shows nothing and reads as a failure. Wait
+for the line the swap prints, then capture at once:
+
+```bash
+before=$(grep -c "✅" metro.log)
+# save the file
+until [ "$(grep -c "✅" metro.log)" -gt "$before" ]; do sleep 0.3; done
+adb exec-out screencap -p > /tmp/a.png        # xcrun simctl io booted screenshot on iOS
+```
+
+**Test the first notice of a fresh process**, not the second. Every later one draws even when
+the first cannot, because by then an Activity has resumed — which is exactly the bug that
+shipped once and hid behind a green line and a reply byte of 0.
+
 ### Two things the probe itself has to get right
 
 Both cost a cycle to learn:
