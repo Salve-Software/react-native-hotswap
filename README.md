@@ -111,6 +111,30 @@ delegate protocol only conforms to `RCTTurboModuleManagerDelegate` under `__cplu
 
 Without these, patching still works and generations do not.
 
+### Your own native code counts
+
+Nothing here is about modules in particular. A generation replaces whatever the packages
+provide, so an app's own Kotlin swaps the same way — including a class created while it was
+running — as long as the app exposes a `ReactPackage`, which is how it exposes native code to
+React Native anyway.
+
+What generations cannot reach is `MainActivity` and `MainApplication`: a React reload rebuilds
+the React instance, not the Activity. Those are patched, which works and keeps the app where
+it was.
+
+An app usually has both its own code and modules, so the watcher takes more than one root:
+
+```js
+module.exports = withHotswap(mergeConfig(getDefaultConfig(__dirname), config), {
+  roots: [__dirname, join(__dirname, 'probe')],
+});
+```
+
+```
+hotswap  watching example: android/app/src/main/java
+hotswap  watching probe: android/src/main/java, android/src/main/cpp, ios, cpp
+```
+
 ## Headers
 
 Editing a `.h` or `.hpp` swaps everything that reaches it, since a header compiles into

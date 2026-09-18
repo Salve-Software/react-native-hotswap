@@ -12,7 +12,9 @@ class MainApplication : Application(), ReactApplication {
   // The one line hotswap needs: the package list is read again for every React instance,
   // so a reload can be built from a generation rather than from the apk.
   override val reactHost: ReactHost by lazy {
-    HotswapReactHost.create(applicationContext) { PackageList(this).packages }
+    HotswapReactHost.create(applicationContext) {
+      PackageList(this).packages.apply { add(AppPackage()) }
+    }
   }
 
   override fun onCreate() {

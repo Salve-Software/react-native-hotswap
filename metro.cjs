@@ -18,7 +18,9 @@ function withHotswap(config, options = {}) {
 
   import('./lib/index.js')
     .then(({ Hotswap, findModuleRoot }) => {
-      new Hotswap(options.root ?? findModuleRoot(process.cwd())).watch();
+      const roots = options.roots ?? [options.root ?? findModuleRoot(process.cwd())];
+
+      for (const root of roots) new Hotswap(root).watch();
     })
     .catch((cause) => console.log(`hotswap  off: ${cause.message.split('\n')[0]}`));
 

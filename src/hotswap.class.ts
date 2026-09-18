@@ -1,6 +1,6 @@
 import type { Outcome, Platform, SwapConfig, Swapper } from './types/index.js';
 import { existsSync } from 'node:fs';
-import { relative } from 'node:path';
+import { basename, relative } from 'node:path';
 import {
   Agent,
   Configuration,
@@ -52,7 +52,7 @@ export class Hotswap {
       .map((at) => relative(this.config.root, at))
       .join(', ');
 
-    console.log(`hotswap  watching ${watched}`);
+    console.log(`hotswap  watching ${basename(this.config.root)}: ${watched}`);
 
     new Watcher(this.config.watch, (path) => this.swap(path)).start();
   }

@@ -9,6 +9,7 @@ const config = {
   watchFolders: [join(__dirname, 'probe')],
 };
 
+// A real app has both: its own native code and the modules it depends on.
 module.exports = withHotswap(mergeConfig(getDefaultConfig(__dirname), config), {
-  root: join(__dirname, 'probe'),
+  roots: [__dirname, join(__dirname, 'probe')],
 });
