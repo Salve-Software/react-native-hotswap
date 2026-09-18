@@ -1,7 +1,8 @@
+import type { SwapConfig, SwapOverrides } from '../../types/index.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ANDROID_PORT, IOS_PORT } from '../../constants/index.js';
-import type { SwapConfig, SwapOverrides } from '../../types/index.js';
+import { CONFIG_FILE } from './constants/index.js';
 import {
   findPodName,
   findWorkspace,
@@ -11,12 +12,10 @@ import {
   resolveOverrides,
 } from './library/index.js';
 
-const FILE = 'hotswap.config.json';
-
 export class Configuration {
   static load(root: string): SwapConfig {
     const defaults = Configuration.defaults(root);
-    const file = join(root, FILE);
+    const file = join(root, CONFIG_FILE);
     const written: SwapOverrides = existsSync(file)
       ? (JSON.parse(readFileSync(file, 'utf8')) as SwapOverrides)
       : {};

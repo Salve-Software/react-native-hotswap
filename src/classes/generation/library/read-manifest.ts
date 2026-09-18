@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
+import { findSources } from '../../../library/index.js';
 import { findNativeClass } from './find-native-classes.js';
 import { findReactPackage } from './find-react-package.js';
-import { findSources } from '../../../library/index.js';
 
 interface Manifest {
   packages: string[];

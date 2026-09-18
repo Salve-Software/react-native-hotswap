@@ -1,7 +1,7 @@
-import { dirname, join, relative } from 'node:path';
-import { Agent } from '../../agent/index.js';
-import { forwardPort } from '../../../library/index.js';
 import type { Outcome, SwapConfig, Swapper } from '../../../types/index.js';
+import { dirname, join, relative } from 'node:path';
+import { forwardPort } from '../../../library/index.js';
+import { Agent } from '../../agent/index.js';
 import {
   buildSharedObject,
   findNativeLibrary,

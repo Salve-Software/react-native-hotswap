@@ -1,6 +1,6 @@
 import { mkdtempSync, mkdirSync, utimesSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { findStaleSpec } from '../find-stale-spec.js';
 

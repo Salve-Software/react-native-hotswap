@@ -1,6 +1,5 @@
 import { execFileSync } from 'node:child_process';
-
-const INTERMEDIATES = '/Build/Intermediates.noindex';
+import { INTERMEDIATES } from '../constants/index.js';
 
 /** Asks Xcode where it puts its objects, which is where the running app's came from. */
 export function readXcodeConfig({

@@ -1,8 +1,8 @@
+import type { SwapConfig } from '../types/index.js';
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { PATCHES } from '../constants/index.js';
-import type { SwapConfig } from '../types/index.js';
 
 interface Listening {
   android: boolean;

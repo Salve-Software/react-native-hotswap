@@ -1,3 +1,4 @@
+import type { Outcome, Platform, SwapConfig, Swapper } from './types/index.js';
 import { relative } from 'node:path';
 import {
   Agent,
@@ -16,7 +17,6 @@ import {
   forwardPort,
   platformsFor,
 } from './library/index.js';
-import type { Outcome, Platform, SwapConfig, Swapper } from './types/index.js';
 
 export class Hotswap {
   readonly config: SwapConfig;

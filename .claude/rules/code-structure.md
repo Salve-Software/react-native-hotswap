@@ -102,9 +102,36 @@ readClassName(file); // reads, then delegates
 
 **A function that is hard to test is badly shaped, not badly tooled.**
 
+## Constants live in `constants/`
+
+A class file declares none. Nor does a library function, when the value configures something
+rather than being part of how the function reads its input:
+
+```ts
+import { PROBE, REPLY } from './constants/index.js'; // timeouts
+
+const QUOTED = /^[ \t]*#\s*include\s+"([^"]+)"/gm; // the parser's own grammar, stays
+```
+
+A regex that _is_ what the function matches stays beside it. A number someone might tune, a
+file name, a protocol byte, a list of extensions — those go to `constants/`, either the
+class's own or `src/constants/` when more than one class needs them.
+
+The protocol bytes are the case that proves it: they were three separate literals in three
+senders, which is three places to get the protocol wrong.
+
 ## Imports
 
 Relative, with the `.js` extension the compiler expects under `nodenext`. No path aliases.
+
+**Type imports come first**, before any value import. `import-x/order` enforces it, so it
+cannot drift again:
+
+```ts
+import type { Outcome, SwapConfig } from '../../../types/index.js';
+import { dirname, join } from 'node:path';
+import { Agent } from '../../agent/index.js';
+```
 
 ## Language
 

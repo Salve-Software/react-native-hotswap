@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
+import imports from 'eslint-plugin-import-x';
 import ts from 'typescript-eslint';
 
 export default [
@@ -34,7 +35,16 @@ export default [
 
   {
     files: ['src/**/*.ts'],
+    plugins: { 'import-x': imports },
     rules: {
+      'import-x/order': [
+        'error',
+        {
+          groups: [['type'], 'builtin', 'external', 'parent', 'sibling', 'index'],
+          'newlines-between': 'never',
+          alphabetize: { order: 'asc' },
+        },
+      ],
       'no-undef': 'off',
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [

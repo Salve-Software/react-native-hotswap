@@ -1,8 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
+import { INCLUDE_DEPTH } from '../constants/index.js';
 import { parseIncludes } from './parse-includes.js';
-
-const DEPTH = 16;
 
 /** The translation units that reach a header, directly or through another header. */
 export function findDependents(header: string, sources: string[]): string[] {
@@ -17,7 +16,8 @@ interface Search {
 }
 
 function reaches(file: string, { wanted, seen }: Search): boolean {
-  if (seen.has(file) || seen.size > DEPTH * DEPTH || !existsSync(file)) return false;
+  if (seen.has(file) || seen.size > INCLUDE_DEPTH * INCLUDE_DEPTH || !existsSync(file))
+    return false;
   seen.add(file);
 
   const includes = parseIncludes(read(file));

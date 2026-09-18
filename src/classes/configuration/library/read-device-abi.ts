@@ -1,6 +1,5 @@
 import { execFileSync } from 'node:child_process';
-
-const FALLBACK = 'arm64-v8a';
+import { FALLBACK_ABI } from '../constants/index.js';
 
 export function readDeviceAbi(): string {
   try {
@@ -8,8 +7,8 @@ export function readDeviceAbi(): string {
       encoding: 'utf8',
     }).trim();
 
-    return abi || FALLBACK;
+    return abi || FALLBACK_ABI;
   } catch {
-    return FALLBACK;
+    return FALLBACK_ABI;
   }
 }

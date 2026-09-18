@@ -1,10 +1,10 @@
+import type { Patch, SwapConfig } from '../../../../types/index.js';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { PATCHES } from '../../../../constants/index.js';
 import { patchFor } from './patch-for.js';
-import type { Patch, SwapConfig } from '../../../../types/index.js';
 
 type Where = Pick<
   SwapConfig,

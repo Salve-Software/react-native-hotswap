@@ -1,12 +1,7 @@
 import { existsSync, watch } from 'node:fs';
 import { basename, join } from 'node:path';
-
 import { isSwappable } from '../../../library/is-swappable.js';
-
-const SETTLE = 120;
-
-// The iOS path writes these itself, so watching them would loop.
-const GENERATED = 'HotswapPatch';
+import { GENERATED, SETTLE } from '../constants/index.js';
 
 /** Calls back once per settled edit, ignoring the burst an editor save produces. */
 export function watchSources(

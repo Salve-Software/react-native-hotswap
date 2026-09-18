@@ -1,7 +1,5 @@
 import { connect } from 'node:net';
-
-const REPLY = 30000;
-const PROBE = 1500;
+import { PROBE, REPLY } from './constants/index.js';
 
 export class Agent {
   constructor(private readonly port: number) {}

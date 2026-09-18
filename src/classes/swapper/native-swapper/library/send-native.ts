@@ -1,15 +1,14 @@
-import { readFileSync } from 'node:fs';
-import { framed } from '../../../agent/index.js';
 import type { NativeSymbol } from '../../../../types/index.js';
-
-const NATIVE = 1;
+import { readFileSync } from 'node:fs';
+import { NATIVE_LIBRARY } from '../../../../constants/index.js';
+import { framed } from '../../../agent/index.js';
 
 export function sendNative(path: string, symbols: NativeSymbol[]): Buffer {
   const count = Buffer.alloc(4);
   count.writeUInt32BE(symbols.length);
 
   return Buffer.concat([
-    Buffer.from([NATIVE]),
+    Buffer.from([NATIVE_LIBRARY]),
     framed(readFileSync(path)),
     count,
     ...symbols.map(frame),

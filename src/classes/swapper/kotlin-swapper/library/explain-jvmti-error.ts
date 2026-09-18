@@ -1,3 +1,5 @@
+import { REBUILDABLE } from '../constants/index.js';
+
 const REASONS: Record<number, string> = {
   21: 'class not loaded yet; exercise the code path once, then save again',
   62: 'the new bytecode failed verification',
@@ -8,9 +10,6 @@ const REASONS: Record<number, string> = {
   71: 'method modifiers changed, usually a d8 version mismatch; see the README',
   103: 'ART refused the dex; check logcat for FAILURE TO REDEFINE',
 };
-
-// 21 is here because an unloaded class would go on to load the apk's copy.
-const REBUILDABLE = [21, 63, 66, 67, 70, 71];
 
 export function needsGeneration(code: number): boolean {
   return REBUILDABLE.includes(code);

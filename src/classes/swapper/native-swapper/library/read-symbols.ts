@@ -1,6 +1,6 @@
+import type { NativeSymbol } from '../../../../types/index.js';
 import { execFileSync } from 'node:child_process';
 import { parseSymbols } from './parse-symbols.js';
-import type { NativeSymbol } from '../../../../types/index.js';
 
 export function readSymbols(library: string, nm: string): NativeSymbol[] {
   const output = execFileSync(

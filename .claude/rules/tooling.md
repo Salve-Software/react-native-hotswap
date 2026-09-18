@@ -83,5 +83,6 @@ adb logcat -s Hotswap
 
 ## Prettier and ESLint
 
-Prettier is the single source of formatting. ESLint carries `max-params: 2` and the import
-ordering, and nothing about style.
+Prettier is the single source of formatting. ESLint carries `max-params: 2` and
+`import-x/order` — type imports first, then builtins, then the rest, alphabetised — and
+nothing about style.

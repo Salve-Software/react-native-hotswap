@@ -1,6 +1,5 @@
+import { GENERATION } from '../../../constants/index.js';
 import { framed } from '../../agent/index.js';
-
-const GENERATION = 2;
 
 interface Manifest {
   packages: string[];

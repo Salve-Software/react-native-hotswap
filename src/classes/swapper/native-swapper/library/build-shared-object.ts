@@ -1,9 +1,9 @@
+import type { CompileCommand } from '../../../../types/index.js';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { splitCommand } from './split-command.js';
-import type { CompileCommand } from '../../../../types/index.js';
 
 export function buildSharedObject(entry: CompileCommand, against: string): string {
   const args = splitCommand(entry.command);

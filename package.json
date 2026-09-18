@@ -62,6 +62,7 @@
     "@types/node": "^22.10.2",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import-x": "^4.17.1",
     "prettier": "^3.9.8",
     "react-native": "0.76.5",
     "typescript": "^5.9.2",

@@ -1,7 +1,6 @@
-import { framed } from '../../../agent/index.js';
 import type { ClassDefinition } from '../../../../types/index.js';
-
-const CLASSES = 0;
+import { CLASSES } from '../../../../constants/index.js';
+import { framed } from '../../../agent/index.js';
 
 export function sendRedefinition(definitions: ClassDefinition[]): Buffer {
   const count = Buffer.alloc(4);

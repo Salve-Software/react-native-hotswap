@@ -1,6 +1,6 @@
+import type { Outcome, SwapConfig, Swapper } from '../../../types/index.js';
 import { relative } from 'node:path';
 import { Agent } from '../../agent/index.js';
-import type { Outcome, SwapConfig, Swapper } from '../../../types/index.js';
 import { buildDylib, sendImage } from './library/index.js';
 
 const REASONS: Record<number, string> = {

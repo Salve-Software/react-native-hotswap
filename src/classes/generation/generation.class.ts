@@ -1,7 +1,7 @@
-import { relative } from 'node:path';
-import { Agent } from '../agent/index.js';
-import { forwardPort } from '../../library/index.js';
 import type { SwapConfig } from '../../types/index.js';
+import { relative } from 'node:path';
+import { forwardPort } from '../../library/index.js';
+import { Agent } from '../agent/index.js';
 import { buildGeneration, readManifest, sendGeneration } from './library/index.js';
 
 export class Generation {

@@ -1,9 +1,9 @@
+import type { ClassDefinition, SwapConfig } from '../../../../types/index.js';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { findDexer } from '../../../../library/find-dexer.js';
-import type { ClassDefinition, SwapConfig } from '../../../../types/index.js';
 
 type Options = Pick<
   SwapConfig,

@@ -1,7 +1,7 @@
+import type { CompileCommand, SwapConfig } from '../../../../types/index.js';
 import { readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { findUnder } from '../../../../library/index.js';
-import type { CompileCommand, SwapConfig } from '../../../../types/index.js';
 
 type Where = Pick<SwapConfig, 'root' | 'project' | 'abi'>;
 

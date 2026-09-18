@@ -1,9 +1,9 @@
+import type { SwapConfig } from '../../../types/index.js';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { findDexer, findSources } from '../../../library/index.js';
-import type { SwapConfig } from '../../../types/index.js';
 
 export function buildGeneration(config: SwapConfig): Buffer[] {
   execFileSync('./gradlew', [config.task, '-q'], {
