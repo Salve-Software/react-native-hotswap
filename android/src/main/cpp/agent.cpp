@@ -11,7 +11,7 @@
 #include <thread>
 #include <vector>
 
-#define LOG_TAG "NitroHot"
+#define LOG_TAG "Hotswap"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
@@ -46,15 +46,43 @@ void resolveStructuralRedefine() {
   gJvmti->Deallocate(reinterpret_cast<unsigned char*>(extensions));
 }
 
+// FindClass on the agent's own thread resolves against the system classloader, which
+// cannot see app classes. Walking the loaded classes finds it in whatever loader owns it.
+jclass findLoadedClass(JNIEnv* env, const std::string& className) {
+  const std::string wanted = "L" + className + ";";
+
+  jint count = 0;
+  jclass* classes = nullptr;
+  if (gJvmti->GetLoadedClasses(&count, &classes) != JVMTI_ERROR_NONE) {
+    return nullptr;
+  }
+
+  jclass found = nullptr;
+  for (jint i = 0; i < count && found == nullptr; i++) {
+    char* signature = nullptr;
+    if (gJvmti->GetClassSignature(classes[i], &signature, nullptr) != JVMTI_ERROR_NONE) {
+      continue;
+    }
+    if (signature != nullptr && wanted == signature) {
+      found = static_cast<jclass>(env->NewLocalRef(classes[i]));
+    }
+    gJvmti->Deallocate(reinterpret_cast<unsigned char*>(signature));
+  }
+
+  for (jint i = 0; i < count; i++) env->DeleteLocalRef(classes[i]);
+  gJvmti->Deallocate(reinterpret_cast<unsigned char*>(classes));
+
+  return found;
+}
+
 jvmtiError redefine(const std::string& className, const std::vector<unsigned char>& dex) {
   JNIEnv* env = nullptr;
   if (gVm->AttachCurrentThread(&env, nullptr) != JNI_OK) {
     return JVMTI_ERROR_INTERNAL;
   }
 
-  jclass target = env->FindClass(className.c_str());
+  jclass target = findLoadedClass(env, className);
   if (target == nullptr) {
-    env->ExceptionClear();
     gVm->DetachCurrentThread();
     return JVMTI_ERROR_INVALID_CLASS;
   }
@@ -171,11 +199,20 @@ Agent_OnAttach(JavaVM* vm, char* options, void* /* reserved */) {
     return JNI_ERR;
   }
 
-  jvmtiCapabilities capabilities{};
-  capabilities.can_redefine_classes = 1;
-  capabilities.can_redefine_any_class = 1;
-  if (gJvmti->AddCapabilities(&capabilities) != JVMTI_ERROR_NONE) {
-    LOGE("could not add redefinition capabilities");
+  // can_redefine_any_class covers system classes and ART does not always grant it, so
+  // ask for only what it says it has rather than failing the whole attach.
+  jvmtiCapabilities available{};
+  gJvmti->GetPotentialCapabilities(&available);
+  LOGI("ART offers redefine_classes=%d redefine_any_class=%d",
+       available.can_redefine_classes, available.can_redefine_any_class);
+
+  jvmtiCapabilities wanted{};
+  wanted.can_redefine_classes = available.can_redefine_classes;
+  wanted.can_redefine_any_class = available.can_redefine_any_class;
+
+  const jvmtiError capabilityError = gJvmti->AddCapabilities(&wanted);
+  if (capabilityError != JVMTI_ERROR_NONE) {
+    LOGE("could not add redefinition capabilities: jvmtiError %d", capabilityError);
     return JNI_ERR;
   }
 
