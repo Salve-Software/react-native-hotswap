@@ -14,6 +14,7 @@ internal object HotswapAgent {
   private const val TAG = "Hotswap"
   private const val LIBRARY = "libhotswap.so"
   private const val LINK = "hotswap-agent.so"
+  private const val APK_LINK = "hotswap-base.apk"
   private const val PORT = 8099
 
   private var attached = false
@@ -29,13 +30,7 @@ internal object HotswapAgent {
       return
     }
 
-    val agent = File(context.applicationInfo.nativeLibraryDir, LIBRARY)
-    if (!agent.exists()) {
-      Log.w(TAG, "agent missing at ${agent.absolutePath}; is useLegacyPackaging on?")
-      return
-    }
-
-    val path = agent.linkWithoutEquals(context) ?: return
+    val path = agentPath(context) ?: return
 
     runCatching { Debug.attachJvmtiAgent(path, "port=$PORT", javaClass.classLoader) }
       .onSuccess { Log.i(TAG, "agent attached from $path") }
@@ -43,15 +38,29 @@ internal object HotswapAgent {
   }
 
   /** Debug.attachJvmtiAgent rejects paths containing '=', which every install path has. */
-  private fun File.linkWithoutEquals(context: Context): String? {
-    val link = File(context.filesDir, LINK)
+  private fun agentPath(context: Context): String? {
+    val extracted = File(context.applicationInfo.nativeLibraryDir, LIBRARY)
+    if (extracted.exists()) return linkTo(context, extracted.absolutePath, LINK)
+
+    // Without extractNativeLibs there is no file, only an apk entry. The linker reads
+    // `archive!/entry`, so the link points at the apk and the suffix follows it.
+    val abi = Build.SUPPORTED_ABIS.firstOrNull() ?: return null
+    val apk = linkTo(context, context.applicationInfo.sourceDir, APK_LINK) ?: return null
+
+    return "$apk!/lib/$abi/$LIBRARY"
+  }
+
+  private fun linkTo(context: Context, target: String, name: String): String? {
+    val link = File(context.filesDir, name)
 
     runCatching { Os.remove(link.absolutePath) }
 
     return runCatching {
-      Os.symlink(absolutePath, link.absolutePath)
+      Os.symlink(target, link.absolutePath)
       link.absolutePath
-    }.onFailure { Log.w(TAG, "could not link the agent", it) }.getOrNull()
+    }
+      .onFailure { Log.w(TAG, "could not link $target", it) }
+      .getOrNull()
   }
 
   private fun Context.isDebuggable(): Boolean =

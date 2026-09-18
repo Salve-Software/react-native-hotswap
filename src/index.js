@@ -1,1 +1,1 @@
-export { withHotswap } from '../metro.cjs'
+export { withHotswap } from '../metro.cjs';
