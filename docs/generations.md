@@ -243,6 +243,33 @@ appear among the names, while `getModuleInstanceFromClass:` only ever saw `RCT*`
 So an iOS generation replaces TurboModules, and a legacy module keeps whatever the app was
 built with. Worth knowing before promising the iOS side to a project that has them.
 
+### Through a real TurboModule, end to end
+
+The example carries a codegen'd module now, called from JS. With a method added since the app
+was installed:
+
+```
+Probe module comes from: apk
+  ↻ ios/ProbeValues.swift  the running app has nothing to replace
+  ♻️  ios/ProbeValues.swift  reloaded from a new generation  498ms
+Probe module comes from: generation (246810)
+```
+
+246810 comes from a method that did not exist at install time, reached through React Native's
+own module resolution, in the same process.
+
+The shape it forced is the iOS story in one line: **a spec conformance has to be
+Objective-C++ and a generation compiles Swift**, so the module class stays put and the logic
+it calls is a Swift class asked for by name. The example's `Probe.mm` is four lines of that
+pattern, and it is the pattern an iOS module has to adopt — not something hotswap can hide.
+
+### The signal that chooses a generation on iOS
+
+Patching is tried first, and what says it failed is the running app rather than the compiler.
+A patch is built against the source as it stands, so a method added a moment ago compiles
+perfectly well and then has nothing to attach to — the dylib either refuses to load or
+replaces nothing. Both mean the same thing, and both are the cue to publish.
+
 ### Patching cannot follow a generation on iOS
 
 A generation is its own Swift module, so its types are not the ones a replacement names: after

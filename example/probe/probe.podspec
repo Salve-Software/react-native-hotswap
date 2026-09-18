@@ -16,4 +16,6 @@ Pod::Spec.new do |s|
   s.pod_target_xcconfig = { "CLANG_CXX_LANGUAGE_STANDARD" => "c++17" }
 
   s.dependency "React-Core"
+
+  install_modules_dependencies(s)
 end

@@ -40,7 +40,11 @@ class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
   // __cplusplus. Returning nil is what React Native already expects for "not mine".
   @objc(getModuleClassFromName:)
   func hotswapModuleClass(_ name: UnsafePointer<CChar>) -> AnyClass? {
-    Hotswap.moduleClass(fromName: name)
+    if let fromGeneration = Hotswap.moduleClass(fromName: name) {
+      return fromGeneration
+    }
+
+    return String(cString: name) == "Probe" ? NSClassFromString("Probe") : nil
   }
 
   override func sourceURL(for bridge: RCTBridge) -> URL? {

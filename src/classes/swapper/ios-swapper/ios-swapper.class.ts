@@ -3,11 +3,6 @@ import { relative } from 'node:path';
 import { Agent } from '../../agent/index.js';
 import { buildDylib, sendImage } from './library/index.js';
 
-const REASONS: Record<number, string> = {
-  1: 'dlopen failed',
-  2: 'loaded but replaced nothing',
-};
-
 export class IosSwapper implements Swapper {
   private readonly agent: Agent;
 
@@ -34,13 +29,18 @@ export class IosSwapper implements Swapper {
       const error = await this.agent.send(sendImage(dylib));
       const took = Date.now() - started;
 
-      console.log(
-        error === 0
-          ? `  ✅ ${name}  ${took}ms`
-          : `  ❌ ${name}  ${REASONS[error] ?? `status ${error}`}  ${took}ms`,
-      );
+      if (error === 0) {
+        console.log(`  ✅ ${name}  ${took}ms`);
 
-      return error === 0 ? 'swapped' : 'failed';
+        return 'swapped';
+      }
+
+      // A patch is compiled against the source as it is now, so a method added since the app
+      // was installed compiles here and then has nothing to attach to there — it either
+      // refuses to load or replaces nothing. Either way the app is the one that knows.
+      console.log(`  ↻ ${name}  the running app has nothing to replace`);
+
+      return 'needs-generation';
     } catch (cause) {
       console.log(`  ❌ ${name}  ${(cause as Error).message.split('\n')[0]}`);
 

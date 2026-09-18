@@ -1,5 +1,6 @@
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Platform, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import NativeProbe from './probe/src/NativeProbe';
 
 const TARGETS = [
   ['Kotlin', 'probe/android/src/main/java/com/probe/ProbeValues.kt'],
@@ -9,6 +10,9 @@ const TARGETS = [
 ];
 
 function App(): React.JSX.Element {
+  const origin =
+    Platform.OS === 'ios' ? (NativeProbe?.origin() ?? 'no module') : 'android';
+
   return (
     <SafeAreaView style={styles.screen}>
       <Text style={styles.title}>react-native-hotswap</Text>
@@ -20,6 +24,7 @@ function App(): React.JSX.Element {
         xcrun simctl spawn booted log stream --predicate 'eventMessage CONTAINS
         "[Probe]"'
       </Text>
+      <Text style={styles.body}>Probe module comes from: {origin}</Text>
       <Text style={styles.body}>Edit any of these and save:</Text>
       {TARGETS.map(([language, path]) => (
         <View key={path} style={styles.row}>
