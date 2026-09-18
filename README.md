@@ -28,10 +28,23 @@ const { withHotswap } = require('react-native-hotswap/metro.cjs');
 module.exports = withHotswap(mergeConfig(getDefaultConfig(__dirname), config));
 ```
 
-That is the whole setup. The watcher starts with Metro, the agent attaches when the app
-launches, and everything else is derived from your Gradle build.
+That is the whole setup for Android. The watcher starts with Metro, the agent attaches when
+the app launches, and everything else is derived from your Gradle build. There is nothing to
+add to `build.gradle`, and nothing to call from your code.
 
-There is nothing to add to `build.gradle`, and nothing to call from your code.
+For Swift, two more lines in the `Podfile`:
+
+```ruby
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve("react-native-hotswap/hotswap.rb", {paths: [process.argv[1]]})',
+  __dir__]).strip
+
+# inside post_install
+hotswap_post_install(installer)
+```
+
+That adds `-interposable` and `-enable-implicit-dynamic` to debug builds, which is what makes
+a Swift method replaceable at all.
 
 ## When it does not work
 
@@ -89,10 +102,9 @@ refuses and tells you:
   recompiled `.so` would need root and an ELF rebinder. The cost is real and the benefit is
   not: in a Nitro module the C++ is generated from the spec, and a spec change already
   demands a rebuild. Hand-written C++ HybridObjects would gain, but they are the minority.
-- **iOS.** The plumbing is there and verified — the pod autolinks, the loader runs, a dylib
-  built from the pod's own object loads safely — but the replacement does not take effect.
-  Nitro dispatches through a C++ vtable, so there is no symbol pointer to rewrite. It reports
-  the failure rather than pretending.
+- **Swift properties and new methods.** iOS replaces method bodies, through Swift's dynamic
+  replacement. A method that did not exist when the app launched has nothing to replace.
+- **iOS devices.** Simulator only.
 - **A class the app has not loaded yet.** It is skipped, and picked up from disk when it does
   load.
 - **Release builds.** The agent only attaches when the app is debuggable, and ART refuses
@@ -103,6 +115,7 @@ refuses and tells you:
 |             |                                                  |
 | ----------- | ------------------------------------------------ |
 | Android     | API 28 to attach, API 30 for structural changes  |
+| iOS         | simulator, and the Podfile hook below            |
 | Build       | debuggable                                       |
 | Build tools | 34, 35 or 36 — [not 37](#why-not-build-tools-37) |
 
@@ -135,6 +148,27 @@ again:
 | W^X blocks `dlopen` from app storage                        | the symlink resolves into the apk, which keeps the label that permits execution               |
 | `FindClass` on the agent thread sees only the system loader | app classes are found by walking `GetLoadedClasses`                                           |
 | ART accepts exactly one class def per dex                   | each class travels in its own dex, sent as one atomic batch                                   |
+
+### iOS, and why it is shaped this way
+
+A changed Swift file is rewritten as an extension of `@_dynamicReplacement` methods, written
+into `ios/HotswapPatch.swift`, compiled by Xcode, and linked alone into a dylib. Three
+attempts got there:
+
+| Attempt                                          | Outcome                                                           |
+| ------------------------------------------------ | ----------------------------------------------------------------- |
+| Reproduce swiftc's invocation                    | each missing header search path revealed another                  |
+| Link the module's objects                        | loads a second copy of the module's Swift metadata, kills the app |
+| **Generate, let Xcode compile, link one object** | works                                                             |
+
+Symbol rebinding is not the mechanism. Nitro dispatches through a C++ vtable, so nothing
+names the Swift method in a way that could be rewritten; dynamic replacement goes around it.
+
+Two things to know:
+
+- `ios/HotswapPatch.swift` has to exist before `pod install`, because CocoaPods globs sources
+  at install time. It is rewritten on every save.
+- A replacement already loaded wins over a newer one. Restart the app to clear it.
 
 ### Why not build tools 37
 
