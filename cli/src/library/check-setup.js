@@ -36,23 +36,35 @@ export async function checkSetup(config) {
       detail: `port ${config.port}`,
     }),
     report({
-      what: 'ios workspace',
-      ok: true,
-      detail: config.workspace ?? 'none found, android only',
-    }),
-    report({
-      what: 'ios loader',
-      ok: loader,
-      detail: `port ${config.iosPort}`,
-    }),
-    report({
-      what: 'ios patch files',
-      ok: missingPatches(config.patchDir).length === 0,
-      detail: describePatches(config.patchDir),
+      what: 'ios target',
+      ok: Boolean(config.workspace && config.scheme),
+      detail: describeTarget(config),
     }),
   ];
 
+  // The rest of the iOS setup only means anything once there is a pod to compile into, and
+  // reporting a missing patch file to someone who cannot swap Swift at all is noise.
+  if (config.workspace && config.scheme) {
+    lines.push(
+      report({ what: 'ios loader', ok: loader, detail: `port ${config.iosPort}` }),
+      report({
+        what: 'ios patch files',
+        ok: missingPatches(config.patchDir).length === 0,
+        detail: describePatches(config.patchDir),
+      }),
+    );
+  }
+
   return lines;
+}
+
+// Swift and C++ are compiled through the pod the module ships, so an app with no podspec of
+// its own has nowhere to put the patch and swaps Kotlin only.
+function describeTarget({ workspace, scheme }) {
+  if (!workspace) return 'no workspace found, android only';
+  if (!scheme) return 'no podspec here; swift and c++ compile through a pod';
+
+  return `${scheme} in ${workspace}`;
 }
 
 // A patch file that appeared after the last pod install is invisible to the target, so the

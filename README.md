@@ -62,6 +62,10 @@ Run it from a project with `android/app/` and it configures itself for that. Wha
 module buys is the safety check: the spec is the ABI, so hotswap knows when a swap would be
 unsound. An app has no such file, so that guarantee is on you.
 
+Kotlin is the part that does not care. Swift and C++ are compiled through the pod the module
+ships, so an app with no podspec of its own swaps Kotlin only — `--check` says so rather than
+letting the first save fail on a missing build setting.
+
 ## When it does not work
 
 ```bash
