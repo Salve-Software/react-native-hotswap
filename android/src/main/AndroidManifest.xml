@@ -5,5 +5,12 @@
        agent stays compressed inside the APK with nothing on disk to point at. -->
   <application
     android:extractNativeLibs="true"
-    tools:replace="android:extractNativeLibs" />
+    tools:replace="android:extractNativeLibs">
+
+    <provider
+      android:name="com.hotswap.HotswapStartup"
+      android:authorities="${applicationId}.hotswap"
+      android:exported="false"
+      android:initOrder="1000" />
+  </application>
 </manifest>

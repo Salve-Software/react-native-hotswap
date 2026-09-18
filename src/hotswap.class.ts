@@ -8,6 +8,7 @@ import {
   IosSwapper,
   KotlinSwapper,
   NativeSwapper,
+  Notice,
   Watcher,
 } from './classes/index.js';
 import { HEADERS } from './constants/index.js';
@@ -26,6 +27,7 @@ export class Hotswap {
   private readonly native: NativeSwapper;
   private readonly ios: IosSwapper;
   private readonly generation: Generation;
+  private readonly notice: Notice;
 
   constructor(root: string) {
     this.config = Configuration.load(root);
@@ -33,6 +35,7 @@ export class Hotswap {
     this.native = new NativeSwapper(this.config);
     this.ios = new IosSwapper(this.config);
     this.generation = new Generation(this.config);
+    this.notice = new Notice(this.config);
   }
 
   async swap(path: string): Promise<boolean> {
@@ -94,12 +97,17 @@ export class Hotswap {
     for (const platform of await this.intendedFor(path)) {
       const outcome: Outcome = await this.swapperFor(platform, path).swap(path);
 
-      if (outcome === 'swapped') swapped = true;
+      if (outcome === 'swapped') {
+        swapped = true;
+        await this.notice.swapped(path, platform);
+      }
+
       if (
         outcome === 'needs-generation' &&
         (await this.generation.publish(path, platform))
       ) {
         swapped = true;
+        await this.notice.regenerated(path, platform);
       }
     }
 

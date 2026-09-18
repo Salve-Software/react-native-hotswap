@@ -23,6 +23,7 @@ constexpr int kDefaultPort = 8099;
 constexpr unsigned char kClasses = 0;
 constexpr unsigned char kNative = 1;
 constexpr unsigned char kGeneration = 2;
+constexpr unsigned char kNotice = 3;
 constexpr const char* kStructuralRedefine =
     "com.android.art.class.structurally_redefine_classes";
 
@@ -247,6 +248,44 @@ unsigned char publishGeneration(const std::vector<std::vector<unsigned char>>& d
   return reply;
 }
 
+unsigned char showNotice(const std::string& text) {
+  JNIEnv* env = nullptr;
+  if (gVm->AttachCurrentThread(&env, nullptr) != JNI_OK) return 1;
+
+  unsigned char reply = 1;
+  {
+    LoadedClasses loaded(env);
+    const std::vector<jclass> found = loaded.find("com/hotswap/HotswapNotice");
+    jclass notice = found.empty() ? nullptr : found.front();
+
+    if (notice != nullptr) {
+      jmethodID show = env->GetStaticMethodID(notice, "show", "(Ljava/lang/String;)V");
+
+      if (show == nullptr) {
+        env->ExceptionClear();
+      } else {
+        jstring line = env->NewStringUTF(text.c_str());
+        env->CallStaticVoidMethod(notice, show, line);
+        env->DeleteLocalRef(line);
+        reply = 0;
+      }
+    }
+  }
+
+  gVm->DetachCurrentThread();
+
+  return reply;
+}
+
+bool serveNotice(int client, unsigned char& reply) {
+  std::string text;
+  if (!readString(client, text)) return false;
+
+  reply = showNotice(text);
+
+  return true;
+}
+
 bool serveGeneration(int client, unsigned char& reply) {
   uint32_t dexCount = 0;
   if (!readExactly(client, &dexCount, sizeof(dexCount))) return false;
@@ -300,11 +339,12 @@ void serveConnection(int client, const std::string& filesDir) {
   while (true) {
     unsigned char kind = 0;
     if (!readExactly(client, &kind, sizeof(kind))) return;
-    if (kind != kClasses && kind != kNative && kind != kGeneration) return;
+    if (kind > kNotice) return;
 
     unsigned char reply = 0;
     bool served = false;
-    if (kind == kGeneration) served = serveGeneration(client, reply);
+    if (kind == kNotice) served = serveNotice(client, reply);
+    else if (kind == kGeneration) served = serveGeneration(client, reply);
     else if (kind == kNative) served = serveNative(client, filesDir, reply);
     else served = serveClasses(client, reply);
     if (!served) return;

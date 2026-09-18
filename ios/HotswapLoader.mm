@@ -6,6 +6,7 @@
 #import <unistd.h>
 
 #import "HotswapGenerations.h"
+#import "HotswapNotice.h"
 #import "HotswapPointers.h"
 #import "HotswapRebind.h"
 
@@ -48,7 +49,7 @@ static void serveConnection(int client) {
   while (YES) {
     uint8_t kind = 0;
     if (!readExactly(client, &kind, sizeof(kind))) return;
-    if (kind > 1) return;
+    if (kind > 2) return;
 
     uint32_t length = 0;
     if (!readExactly(client, &length, sizeof(length))) return;
@@ -58,9 +59,12 @@ static void serveConnection(int client) {
     NSMutableData *buffer = [NSMutableData dataWithLength:length];
     if (!readExactly(client, buffer.mutableBytes, length)) return;
 
-    NSString *path = [[NSString alloc] initWithData:buffer encoding:NSUTF8StringEncoding];
-    uint8_t reply = kind == 1 ? (HotswapPublishGeneration(path.UTF8String) ? 0 : 1)
-                              : loadImage(path);
+    NSString *payload = [[NSString alloc] initWithData:buffer encoding:NSUTF8StringEncoding];
+    uint8_t reply = 0;
+
+    if (kind == 2) HotswapShowNotice(payload);
+    else if (kind == 1) reply = HotswapPublishGeneration(payload.UTF8String) ? 0 : 1;
+    else reply = loadImage(payload);
 
     if (send(client, &reply, 1, 0) != 1) return;
   }
