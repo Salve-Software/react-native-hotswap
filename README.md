@@ -122,6 +122,9 @@ refuses and tells you:
   alone on purpose.
 - **Anything already inlined.** A body the compiler copied into its callers is not reachable
   by any of this. Debug builds inline little, which is why it mostly does not come up.
+- **A function pointer that lives on the heap.** Vtables are patched because they sit in the
+  image's data sections, which is what gets scanned. A `std::function` built at runtime, or a
+  callback table allocated on the heap, still holds the old address and keeps calling it.
 - **Swift properties and new methods.** iOS replaces method bodies, through Swift's dynamic
   replacement. A method that did not exist when the app launched has nothing to replace.
 - **iOS devices.** Simulator only.
@@ -207,9 +210,9 @@ of them names a symbol.
 
 The vtable holds the address directly and names nothing, which is why a virtual method kept
 running its old body while a free function in the same file swapped correctly. Every address
-the new image defines is now found in the running images by name and overwritten wherever it
-is stored. Only symbols in executable sections count — a global in the edited file would
-otherwise have its pointers aimed at a fresh copy and lose its state.
+the new image defines is now found in the running images by name and overwritten in their data
+sections, which is where a vtable lives. Only symbols in executable sections count — a global
+in the edited file would otherwise have its pointers aimed at a fresh copy and lose its state.
 
 One consequence is not obvious: a patched vtable slot no longer holds the address the app's
 symbol table reports, so hotswap remembers what each swap installed. Without that, the second

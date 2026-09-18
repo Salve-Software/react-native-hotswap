@@ -96,6 +96,10 @@ what a swap installs has to be remembered: a patched vtable slot no longer holds
 the symbol table reports, so the second swap of a method finds nothing and the first swap's
 code keeps running.
 
+The reach is the images' data sections, not all of memory. That covers a vtable and misses a
+function pointer built on the heap, which is the honest limit to quote rather than "every
+call site".
+
 Android C++ is still out, and for an unchanged reason: W^X blocks loading a recompiled `.so`.
 
 Every swap links its dylib under a new name. dyld keys a loaded image on its install name, so
