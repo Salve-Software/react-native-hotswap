@@ -6,5 +6,5 @@ dependencyResolutionManagement {
   repositories { google(); mavenCentral() }
 }
 
-rootProject.name = "react-native-nitro-hot"
+rootProject.name = "react-native-hotswap"
 include ":android"

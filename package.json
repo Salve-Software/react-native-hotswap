@@ -1,14 +1,14 @@
 {
-  "name": "react-native-nitro-hot",
+  "name": "react-native-hotswap",
   "version": "0.1.0",
-  "description": "Hot reload the Kotlin and Swift side of your Nitro modules, without reinstalling the app.",
+  "description": "Hot-swap the native side of your React Native app. Kotlin today, C++ and Swift next. Safest with Nitro.",
   "main": "./lib/commonjs/index.js",
   "module": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
   "react-native": "src/index",
   "source": "src/index",
   "bin": {
-    "nitro-hot": "./cli/bin/nitro-hot.js"
+    "hotswap": "./cli/bin/hotswap.js"
   },
   "files": [
     "src",
@@ -46,11 +46,11 @@
     "android",
     "ios"
   ],
-  "repository": "https://github.com/Salve-Software/react-native-nitro-hot.git",
+  "repository": "https://github.com/Salve-Software/react-native-hotswap.git",
   "author": "Salve Software (https://github.com/Salve-Software)",
   "license": "MIT",
-  "bugs": "https://github.com/Salve-Software/react-native-nitro-hot/issues",
-  "homepage": "https://github.com/Salve-Software/react-native-nitro-hot#readme",
+  "bugs": "https://github.com/Salve-Software/react-native-hotswap/issues",
+  "homepage": "https://github.com/Salve-Software/react-native-hotswap#readme",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
