@@ -216,10 +216,21 @@ void listenForever(int port) {
 
   while (true) {
     const int client = accept(server, nullptr, nullptr);
-    if (client < 0) continue;
+
+    if (client < 0) {
+      // EINTR and friends are worth retrying; anything else means the listening socket is
+      // gone, and looping on it would spin a core for the life of the app.
+      if (errno == EINTR || errno == ECONNABORTED) continue;
+
+      LOGE("accept failed: %s", std::strerror(errno));
+      break;
+    }
+
     serveConnection(client);
     close(client);
   }
+
+  close(server);
 }
 
 int portFrom(const char* options) {
