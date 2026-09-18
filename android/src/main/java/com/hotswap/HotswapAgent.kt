@@ -13,7 +13,7 @@ internal object HotswapAgent {
 
   private const val TAG = "Hotswap"
   private const val LIBRARY = "libhotswap.so"
-  private const val LINK = "hotswap-agent.so"
+  private const val EXTRACTED_LINK = "hotswap-agent.so"
   private const val APK_LINK = "hotswap-base.apk"
   private const val PORT = 8099
 
@@ -31,28 +31,33 @@ internal object HotswapAgent {
     }
 
     val path = agentPath(context) ?: return
-
-    val options = "port=$PORT,files=${context.filesDir.absolutePath},lib=${context.applicationInfo.nativeLibraryDir}"
+    val options = "port=$PORT,files=${context.filesDir.absolutePath}"
 
     runCatching { Debug.attachJvmtiAgent(path, options, javaClass.classLoader) }
       .onSuccess { Log.i(TAG, "agent attached from $path") }
       .onFailure { Log.w(TAG, "could not attach the agent", it) }
   }
 
-  /** Debug.attachJvmtiAgent rejects paths containing '=', which every install path has. */
   private fun agentPath(context: Context): String? {
     val extracted = File(context.applicationInfo.nativeLibraryDir, LIBRARY)
-    if (extracted.exists()) return linkTo(context, extracted.absolutePath, LINK)
 
-    // Without extractNativeLibs there is no file, only an apk entry. The linker reads
-    // `archive!/entry`, so the link points at the apk and the suffix follows it.
+    return if (extracted.exists()) {
+      linkWithoutEquals(context, extracted.absolutePath, EXTRACTED_LINK)
+    } else {
+      entryInsideApk(context)
+    }
+  }
+
+  private fun entryInsideApk(context: Context): String? {
     val abi = Build.SUPPORTED_ABIS.firstOrNull() ?: return null
-    val apk = linkTo(context, context.applicationInfo.sourceDir, APK_LINK) ?: return null
+    val apk = linkWithoutEquals(context, context.applicationInfo.sourceDir, APK_LINK)
+      ?: return null
 
     return "$apk!/lib/$abi/$LIBRARY"
   }
 
-  private fun linkTo(context: Context, target: String, name: String): String? {
+  private fun linkWithoutEquals(context: Context, target: String, name: String): String? {
+    // Debug.attachJvmtiAgent rejects any path containing '='.
     val link = File(context.filesDir, name)
 
     runCatching { Os.remove(link.absolutePath) }
