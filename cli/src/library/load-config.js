@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { findPodName } from './find-pod-name.js';
+import { findWorkspace } from './find-workspace.js';
 import { readGradleConfig } from './read-gradle-config.js';
 
 /** Derives what to compile and where, overridable by hotswap.config.json. */
@@ -16,6 +18,11 @@ export function loadConfig(root) {
     project: findGradle(root),
     task: `:${pkg.name}:compileDebugKotlin`,
     classes: join(root, 'android/build/tmp/kotlin-classes/debug'),
+    workspace: findWorkspace(root),
+    scheme: findPodName(root),
+    derivedData: join(root, '.hotswap/derived-data'),
+    arch: 'arm64',
+    iosTarget: 'arm64-apple-ios15.1-simulator',
     specs: join(root, 'src/specs'),
     generated: join(root, 'nitrogen/generated'),
   };

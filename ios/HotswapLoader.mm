@@ -33,7 +33,9 @@ static uint8_t loadImage(NSString *path) {
   size_t rebound = HotswapRebindSymbols(image);
   NSLog(@"[Hotswap] loaded %@, rebound %zu symbol(s)", path.lastPathComponent, rebound);
 
-  return 0;
+  // Loading without rebinding leaves the old code running, which is worse than a clean
+  // failure: the developer sees no error and no change.
+  return rebound > 0 ? 0 : 2;
 }
 
 static void serveConnection(int client) {

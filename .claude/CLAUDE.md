@@ -58,9 +58,27 @@ classic `RedefineClasses`. ART's structural extension, present from Android 11, 
 Compose HotSwan moved off JVMTI to an interpreter over exactly this limit; the limit is real
 for the old call and not for the extension.
 
-**iOS is not started.** The mechanism is different — a recompiled dylib plus linker
-interposing — and the prior art is MIT. It covers Swift, Objective-C and C++ through one
-pipeline, unlike Android where each needs its own.
+**iOS loads but does not replace, and the reason is specific.** Everything around the swap
+works and is verified on the simulator: the pod autolinks, the loader listens, a dylib built
+from the pod's own object arrives and opens, and the rebinder is safe — a probe that defines
+nothing the app calls rebinds nothing.
+
+What does not happen is the replacement. The rebinder rewrites indirect symbol pointers, and
+the app never reaches `HybridUnfoldBridge.getState` through one: the caller is Nitro's
+generated C++ bridge, which dispatches through a vtable. `-interposable` does not help,
+because there is no GOT entry naming that symbol to rewrite.
+
+Taking it further means patching Swift class metadata or the vtable, or moving to
+`@_dynamicReplacement` with a source transform. Until then the loader reports status 2 —
+loaded, replaced nothing — and the CLI calls it a failure, because silently running the old
+code is worse than an error.
+
+Two things that did work and are worth keeping:
+
+|                                   |                                                                                               |
+| --------------------------------- | --------------------------------------------------------------------------------------------- |
+| Let Xcode compile, then link      | reproducing swiftc's invocation is endless drift; the pod's own `.o` already matches          |
+| Link one object, never the module | a dylib carrying the whole module loads a second copy of its Swift metadata and kills the app |
 
 ## Mandatory rules
 

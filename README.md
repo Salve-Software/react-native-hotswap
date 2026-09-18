@@ -68,8 +68,10 @@ refuses and tells you:
 
 - **C++.** Android blocks loading code from app-writable storage, so the C++ half of a Nitro
   module still needs a rebuild.
-- **iOS.** Not implemented yet. The mechanism is different — a recompiled dylib plus linker
-  interposing — and it is the next thing on the list.
+- **iOS.** The plumbing is there and verified — the pod autolinks, the loader runs, a dylib
+  built from the pod's own object loads safely — but the replacement does not take effect.
+  Nitro dispatches through a C++ vtable, so there is no symbol pointer to rewrite. It reports
+  the failure rather than pretending.
 - **A class the app has not loaded yet.** It is skipped, and picked up from disk when it does
   load.
 - **Release builds.** The agent only attaches when the app is debuggable, and ART refuses
