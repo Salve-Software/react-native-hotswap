@@ -17,8 +17,8 @@ export async function checkSetup(config) {
     }),
     report({
       what: 'nitro spec',
-      ok: existsSync(config.specs),
-      detail: 'guard is active',
+      ok: true,
+      detail: existsSync(config.specs) ? 'guard is active' : 'none, nothing to guard',
     }),
     report({ what: 'android device', ok: hasDevice(), detail: 'adb devices' }),
     report({
@@ -28,8 +28,8 @@ export async function checkSetup(config) {
     }),
     report({
       what: 'ios workspace',
-      ok: Boolean(config.workspace),
-      detail: config.workspace ?? 'none found',
+      ok: true,
+      detail: config.workspace ?? 'none found, android only',
     }),
   ];
 

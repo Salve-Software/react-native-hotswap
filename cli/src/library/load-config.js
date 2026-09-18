@@ -7,6 +7,7 @@ import { readGradleConfig } from './read-gradle-config.js';
 /** Derives what to compile and where, overridable by hotswap.config.json. */
 export function loadConfig(root) {
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  const app = isApp(root);
 
   const defaults = {
     root,
@@ -14,10 +15,14 @@ export function loadConfig(root) {
     iosPort: 8100,
     minApi: 24,
     buildTools: undefined,
-    watch: [join(root, 'android/src/main/java'), join(root, 'ios')],
+    watch: app
+      ? [join(root, 'android/app/src/main/java')]
+      : [join(root, 'android/src/main/java'), join(root, 'ios')],
     project: findGradle(root),
-    task: `:${pkg.name}:compileDebugKotlin`,
-    classes: join(root, 'android/build/tmp/kotlin-classes/debug'),
+    task: app ? ':app:compileDebugKotlin' : `:${pkg.name}:compileDebugKotlin`,
+    classes: app
+      ? join(root, 'android/app/build/tmp/kotlin-classes/debug')
+      : join(root, 'android/build/tmp/kotlin-classes/debug'),
     workspace: findWorkspace(root),
     scheme: findPodName(root),
     derivedData: join(root, '.hotswap/derived-data'),
@@ -40,6 +45,14 @@ export function loadConfig(root) {
   const merged = { ...defaults, ...fromGradle(defaults.project), ...overrides };
 
   return merged;
+}
+
+/** An app keeps its Kotlin under android/app; a library keeps it under android/src. */
+function isApp(root) {
+  return (
+    existsSync(join(root, 'android/app/src/main/java')) &&
+    !existsSync(join(root, 'android/src/main/java'))
+  );
 }
 
 /** The build is the only source that knows how the installed APK was dexed. */

@@ -46,6 +46,19 @@ hotswap_post_install(installer)
 That adds `-interposable` and `-enable-implicit-dynamic` to debug builds, which is what makes
 a Swift method replaceable at all.
 
+## It is not only for libraries
+
+The agent redefines Kotlin classes; it has no idea what a Nitro module is. Point it at an
+app and it swaps the app's own code:
+
+```
+  ✅ android/app/src/main/java/com/unfoldexample/MainActivity.kt  1578ms
+```
+
+Run it from a project with `android/app/` and it configures itself for that. What a Nitro
+module buys is the safety check: the spec is the ABI, so hotswap knows when a swap would be
+unsound. An app has no such file, so that guarantee is on you.
+
 ## When it does not work
 
 ```bash

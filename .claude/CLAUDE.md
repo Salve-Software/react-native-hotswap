@@ -6,6 +6,10 @@ the class is replaced in place, the app keeps its state.
 A JVMTI agent rides inside the app; a watcher on the dev machine compiles and ships each
 edit. Installing the package and adding two lines to `metro.config.js` is the whole setup.
 
+Nothing in the agent knows what a Nitro module is, so an app's own Kotlin swaps just as well
+— verified on `MainActivity`. Nitro is the first-class target because its spec makes the
+safety check mechanical, not because the mechanism needs it.
+
 ## The five rules that are not negotiable
 
 1. **Never in a release build.** The agent attaches only when `FLAG_DEBUGGABLE` is set, and
