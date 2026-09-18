@@ -52,7 +52,7 @@ export function buildDylib(
   );
 
   try {
-    return link(objectFor(derivedData, scheme, arch), iosTarget);
+    return link(objectFor({ derivedData, scheme, arch }), iosTarget);
   } finally {
     // The object is already linked, so the file can go back to being empty and the
     // developer's working tree stays clean between saves.
@@ -92,7 +92,7 @@ function link(object, iosTarget) {
   return out;
 }
 
-function objectFor(derivedData, scheme, arch) {
+function objectFor({ derivedData, scheme, arch }) {
   return join(
     derivedData,
     'Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator',

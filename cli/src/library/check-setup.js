@@ -5,18 +5,38 @@ import { connect } from 'node:net';
 /** Reports what is wired up and what is missing, so setup fails loudly rather than silently. */
 export async function checkSetup(config) {
   const lines = [
-    report('gradle project', existsSync(config.project), config.project),
-    report('kotlin sources', existsSync(config.watch[0]), config.watch[0]),
-    report('nitro spec', existsSync(config.specs), 'guard is active'),
-    report('android device', hasDevice(), 'adb devices'),
-    report('agent reachable', await reachable(config.port), `port ${config.port}`),
-    report('ios workspace', Boolean(config.workspace), config.workspace ?? 'none found'),
+    report({
+      what: 'gradle project',
+      ok: existsSync(config.project),
+      detail: config.project,
+    }),
+    report({
+      what: 'kotlin sources',
+      ok: existsSync(config.watch[0]),
+      detail: config.watch[0],
+    }),
+    report({
+      what: 'nitro spec',
+      ok: existsSync(config.specs),
+      detail: 'guard is active',
+    }),
+    report({ what: 'android device', ok: hasDevice(), detail: 'adb devices' }),
+    report({
+      what: 'agent reachable',
+      ok: await reachable(config.port),
+      detail: `port ${config.port}`,
+    }),
+    report({
+      what: 'ios workspace',
+      ok: Boolean(config.workspace),
+      detail: config.workspace ?? 'none found',
+    }),
   ];
 
   return lines;
 }
 
-function report(what, ok, detail) {
+function report({ what, ok, detail }) {
   return `  ${ok ? '✅' : '⛔'} ${what.padEnd(18)} ${detail}`;
 }
 
