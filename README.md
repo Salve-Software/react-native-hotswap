@@ -5,8 +5,8 @@ restart, no lost state.
 
 ```
 hotswap  watching android/src/main/java  →  127.0.0.1:8099
-  ✅ android/src/main/java/com/unfold/library/ToPosture.kt  952ms
-  ✅ android/src/main/java/com/unfold/HybridUnfoldBridge.kt +3  1198ms
+  ✅ probe/android/src/main/java/com/probe/ProbeValues.kt  1234ms
+  ✅ probe/cpp/probe.cpp  435ms
   ✅ cpp/FoldGeometry.cpp  3105ms
 ```
 
@@ -55,7 +55,7 @@ The agent redefines Kotlin classes; it has no idea what a Nitro module is. Point
 app and it swaps the app's own code:
 
 ```
-  ✅ android/app/src/main/java/com/unfoldexample/MainActivity.kt  1578ms
+  ✅ android/app/src/main/java/com/hotswapexample/AppValues.kt  1548ms
 ```
 
 Run it from a project with `android/app/` and it configures itself for that. What a Nitro
@@ -163,7 +163,7 @@ hotswap  setup
   ✅ nitro spec         guard is active
   ✅ android device     adb devices
   ✅ agent reachable    port 8099
-  ✅ ios workspace      example/ios/UnfoldExample.xcworkspace
+  ✅ ios target         probe in example/ios/HotswapExample.xcworkspace
 ```
 
 `agent reachable` failing usually means the app is not running, or the build was not
@@ -202,7 +202,7 @@ the ABI moved and swapping Kotlin against it would produce an app that half-work
 refuses and tells you:
 
 ```
-  ⛔ ToPosture.kt  src/specs/unfold.nitro.ts changed; run codegen and rebuild
+  ⛔ ProbeValues.kt  src/specs/probe.nitro.ts changed; run codegen and rebuild
 ```
 
 ## What it cannot change
@@ -381,6 +381,16 @@ with `jvmtiError 71`. Versions 34 through 36 preserve the flag.
 
 hotswap reads `buildToolsVersion` from your build and, failing that, picks the newest version
 at or below 36.
+
+## Trying it
+
+`example/` in this repository is a React Native app with its own native code, and
+`example/probe` is a module it depends on. Both are wired up, so the fastest way to see any of
+this is to run it and edit one of the files the app lists on screen.
+
+```bash
+cd example && npm install && npx react-native start
+```
 
 ## Prior art
 
