@@ -75,10 +75,55 @@ change shape, generations change shape and cannot keep objects.
 
 - **`MainApplication`, `MainActivity`, `AppDelegate`.** A React reload does not recreate
   them. They keep needing patching, or an activity recreate.
-- **iOS is not solved by this note.** There is no class loader. The equivalent is a dylib per
-  generation, and class identity in the Objective-C and Swift runtimes is decided by name,
-  not by the image a class came from. Needs its own investigation before any promise.
+- **Objective-C modules.** See below: they collide by name where Swift does not.
 - **Native state inside the module.** Gone on every reload, by construction.
+
+## iOS
+
+Both halves hold there too, for different reasons than on Android.
+
+`RCTHost.didReceiveReloadCommand` invalidates the `RCTInstance` and allocates a new one, so
+module instances are recreated the same way. That is the half that matches.
+
+The other half does not match, and the difference is the whole iOS design. There is no class
+loader, and the Objective-C runtime keys a class on its name — so two generations of the same
+class collide:
+
+```
+objc[78972]: Class Thing is implemented in both libgen1.dylib and libgen2.dylib.
+             This may cause spurious casting failures and mysterious crashes.
+
+geracao 1: class=0x1028c80c0 value=1
+geracao 2: class=0x1028d80c0 value=2
+objc_getClass("Thing") -> 0x1028c80c0       ← always the first
+```
+
+A factory exported by each dylib still reaches the right class, because the linker resolves
+it inside the image. But anything that looks the class up **by name** is stuck on generation
+one forever, and the runtime is right that casting across the two will fail.
+
+Compiling each generation as its own Swift module removes the collision rather than routing
+around it — the module name mangles into the Objective-C name:
+
+```
+geracao 1: objcName=Gen1.Thing value=1
+geracao 2: objcName=Gen2.Thing value=2          no warning at all
+```
+
+So on iOS a generation is **a Swift module of its own**, reached through an exported factory
+and never by name. Cleaner than the Android side, where the collision is real and the parent
+loader has to refuse the apk copy.
+
+What this costs:
+
+- **`RCT_EXPORT_MODULE` registers by name at load.** A module RN finds that way gets
+  generation one. Instances have to come from a provider we control, which is the same
+  requirement the Android side has.
+- **Objective-C modules do not get the Swift trick.** Their class names do not carry a module,
+  so two generations genuinely collide. Either they go through the factory and tolerate the
+  warning, or they stay on patching.
+- **Old dylibs stay mapped.** `dlclose` is not reliable with Swift metadata, so every
+  generation leaks. Acceptable in development, and worth saying out loud.
 
 ## Order of work
 
@@ -87,6 +132,6 @@ change shape, generations change shape and cannot keep objects.
 3. **Drive the reload.** Publish, then ask `ReactHost` to reload, then report what changed.
 4. **Fall back honestly.** A change that patching handles should still be patched: it is
    faster and it keeps objects. Generations are for what patching cannot do.
-5. **iOS.** Investigate before scoping.
+5. **iOS.** A Swift module per generation, reached through a factory.
 
 Patching does not go away. It becomes the fast path.
