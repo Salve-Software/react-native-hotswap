@@ -5,6 +5,7 @@
 #import <sys/socket.h>
 #import <unistd.h>
 
+#import "HotswapPointers.h"
 #import "HotswapRebind.h"
 
 static const int kPort = 8100;
@@ -32,13 +33,15 @@ static uint8_t loadImage(NSString *path) {
 
   const bool replaced = HotswapHasReplacements(path.UTF8String);
   size_t rebound = HotswapRebindSymbols(image, path.UTF8String);
+  size_t patched = HotswapPatchPointers(path.UTF8String);
 
-  NSLog(@"[Hotswap] loaded %@, %@, rebound %zu symbol(s)", path.lastPathComponent,
-        replaced ? @"swift replacements applied" : @"no swift replacements", rebound);
+  NSLog(@"[Hotswap] loaded %@, %@, rebound %zu symbol(s), patched %zu pointer(s)",
+        path.lastPathComponent,
+        replaced ? @"swift replacements applied" : @"no swift replacements", rebound, patched);
 
-  // Loading without rebinding leaves the old code running, which is worse than a clean
-  // failure: the developer sees no error and no change.
-  return (replaced || rebound > 0) ? 0 : 2;
+  // Loading without changing anything leaves the old code running, which is worse than a
+  // clean failure: the developer sees no error and no change.
+  return (replaced || rebound > 0 || patched > 0) ? 0 : 2;
 }
 
 static void serveConnection(int client) {
