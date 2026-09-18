@@ -1,4 +1,4 @@
-![react-native-hotswap](assets/banner-hotswap.png)
+![react-native-hotswap](https://raw.githubusercontent.com/Salve-Software/react-native-hotswap/main/assets/banner-hotswap.png)
 
 # react-native-hotswap
 
