@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { generateSwiftReplacement } from './generate-swift-replacement.js';
 
 const PATCH = 'HotswapPatch.swift';
+const PLACEHOLDER = 'import Foundation\n';
 
 /**
  * Turns a changed Swift file into a dylib the running app can adopt.
@@ -21,8 +22,13 @@ export function buildDylib(
   if (!replacement) throw new Error(`${basename(path)} declares no replaceable methods`);
 
   const patch = join(patchDir, PATCH);
+
+  // CocoaPods globs sources at install time, so a file that appears later is invisible to
+  // the target until the next install. Creating it is cheap; telling the developer is not.
   if (!existsSync(patch)) {
-    throw new Error(`${patch} is missing; create it and run pod install once`);
+    writeFileSync(patch, PLACEHOLDER);
+
+    throw new Error(`created ${PATCH}; run pod install once, then save again`);
   }
 
   writeFileSync(patch, replacement);
@@ -45,7 +51,13 @@ export function buildDylib(
     { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 },
   );
 
-  return link(objectFor(derivedData, scheme, arch), iosTarget);
+  try {
+    return link(objectFor(derivedData, scheme, arch), iosTarget);
+  } finally {
+    // The object is already linked, so the file can go back to being empty and the
+    // developer's working tree stays clean between saves.
+    writeFileSync(patch, PLACEHOLDER);
+  }
 }
 
 /** Only the patch object is linked: a dylib of the whole module loads a second copy of its
