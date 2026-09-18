@@ -3,32 +3,31 @@
   "version": "0.1.0",
   "description": "Hot-swap the native side of your React Native app. Kotlin today, C++ and Swift next. Safest with Nitro.",
   "bin": {
-    "hotswap": "./cli/bin/hotswap.js"
+    "hotswap": "./lib/bin.js"
   },
   "files": [
+    "lib",
     "android/build.gradle",
     "android/src",
     "android/CMakeLists.txt",
     "ios",
-    "cli",
-    "src",
+    "gradle",
     "metro.cjs",
     "hotswap.rb",
     "*.podspec",
     "README.md",
-    "LICENSE",
-    "!**/__tests__",
-    "!**/*.test.js"
+    "LICENSE"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "prepare": "bun run build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "bun run typecheck && bob build",
     "clean": "git clean -dfX"
   },
   "keywords": [
@@ -65,17 +64,20 @@
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.8",
     "react-native": "0.76.5",
-    "react-native-builder-bob": "^0.33.3",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.70.0",
     "vitest": "^5.0.1"
   },
   "type": "module",
-  "main": "./src/index.js",
+  "main": "./lib/index.js",
   "exports": {
-    ".": "./src/index.js",
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
     "./metro.cjs": "./metro.cjs",
     "./hotswap.rb": "./hotswap.rb",
     "./package.json": "./package.json"
-  }
+  },
+  "types": "./lib/index.d.ts"
 }
