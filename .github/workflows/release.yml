@@ -33,7 +33,7 @@ jobs:
       # Publishing is npm's own OIDC exchange, and the runner image ships an npm too old
       # for it. semantic-release only skips the token check; it still shells out to publish.
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           registry-url: 'https://registry.npmjs.org'
