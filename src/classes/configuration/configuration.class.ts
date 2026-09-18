@@ -45,7 +45,12 @@ export class Configuration {
       abi: readDeviceAbi(),
       watch: app
         ? [join(root, 'android/app/src/main/java')]
-        : [join(root, 'android/src/main/java'), join(root, 'ios'), join(root, 'cpp')],
+        : [
+            join(root, 'android/src/main/java'),
+            join(root, 'android/src/main/cpp'),
+            join(root, 'ios'),
+            join(root, 'cpp'),
+          ],
       project: Configuration.findGradle(root),
       task: app ? ':app:compileDebugKotlin' : `:${pkg.name}:compileDebugKotlin`,
       classes: app
