@@ -70,28 +70,48 @@ jclass findLoadedClass(JNIEnv* env, const std::string& className) {
   return found;
 }
 
-jvmtiError redefine(const std::string& className, const std::vector<unsigned char>& dex) {
+struct Definition {
+  std::string className;
+  std::vector<unsigned char> dex;
+};
+
+jvmtiError redefine(const std::vector<Definition>& definitions) {
   JNIEnv* env = nullptr;
   if (gVm->AttachCurrentThread(&env, nullptr) != JNI_OK) {
     return JVMTI_ERROR_INTERNAL;
   }
 
-  jclass target = findLoadedClass(env, className);
-  if (target == nullptr) {
+  std::vector<jvmtiClassDefinition> classes;
+  classes.reserve(definitions.size());
+
+  for (const Definition& definition : definitions) {
+    jclass target = findLoadedClass(env, definition.className);
+
+    // A lambda the runtime has not reached yet cannot be redefined, and does not need to
+    // be: it will load from the dex on disk. Skipping beats failing the whole swap.
+    if (target == nullptr) {
+      LOGI("skipping %s, not loaded yet", definition.className.c_str());
+      continue;
+    }
+
+    jvmtiClassDefinition entry{};
+    entry.klass = target;
+    entry.class_byte_count = static_cast<jint>(definition.dex.size());
+    entry.class_bytes = definition.dex.data();
+    classes.push_back(entry);
+  }
+
+  if (classes.empty()) {
     gVm->DetachCurrentThread();
     return JVMTI_ERROR_INVALID_CLASS;
   }
 
-  jvmtiClassDefinition definition{};
-  definition.klass = target;
-  definition.class_byte_count = static_cast<jint>(dex.size());
-  definition.class_bytes = dex.data();
-
+  const jint count = static_cast<jint>(classes.size());
   const jvmtiError result = gStructuralRedefine != nullptr
-                                ? gStructuralRedefine(gJvmti, 1, &definition)
-                                : gJvmti->RedefineClasses(1, &definition);
+                                ? gStructuralRedefine(gJvmti, count, classes.data())
+                                : gJvmti->RedefineClasses(count, classes.data());
 
-  env->DeleteLocalRef(target);
+  for (const jvmtiClassDefinition& entry : classes) env->DeleteLocalRef(entry.klass);
   gVm->DetachCurrentThread();
 
   return result;
@@ -108,29 +128,46 @@ bool readExactly(int fd, void* into, size_t size) {
   return true;
 }
 
+bool readString(int client, std::string& into) {
+  uint32_t length = 0;
+  if (!readExactly(client, &length, sizeof(length))) return false;
+  length = ntohl(length);
+  if (length == 0 || length > 1024) return false;
+
+  into.resize(length);
+
+  return readExactly(client, into.data(), length);
+}
+
+bool readBytes(int client, std::vector<unsigned char>& into) {
+  uint32_t length = 0;
+  if (!readExactly(client, &length, sizeof(length))) return false;
+  length = ntohl(length);
+  if (length == 0 || length > 64 * 1024 * 1024) return false;
+
+  into.resize(length);
+
+  return readExactly(client, into.data(), length);
+}
+
 void serveConnection(int client) {
   while (true) {
-    uint32_t nameLength = 0;
-    if (!readExactly(client, &nameLength, sizeof(nameLength))) return;
-    nameLength = ntohl(nameLength);
-    if (nameLength == 0 || nameLength > 1024) return;
+    uint32_t count = 0;
+    if (!readExactly(client, &count, sizeof(count))) return;
+    count = ntohl(count);
+    if (count == 0 || count > 256) return;
 
-    std::string className(nameLength, '\0');
-    if (!readExactly(client, className.data(), nameLength)) return;
+    std::vector<Definition> definitions(count);
+    for (uint32_t i = 0; i < count; i++) {
+      if (!readString(client, definitions[i].className)) return;
+      if (!readBytes(client, definitions[i].dex)) return;
+    }
 
-    uint32_t dexLength = 0;
-    if (!readExactly(client, &dexLength, sizeof(dexLength))) return;
-    dexLength = ntohl(dexLength);
-    if (dexLength == 0) return;
-
-    std::vector<unsigned char> dex(dexLength);
-    if (!readExactly(client, dex.data(), dexLength)) return;
-
-    const jvmtiError error = redefine(className, dex);
+    const jvmtiError error = redefine(definitions);
     if (error == JVMTI_ERROR_NONE) {
-      LOGI("redefined %s (%u bytes)", className.c_str(), dexLength);
+      LOGI("redefined %u class(es), first %s", count, definitions[0].className.c_str());
     } else {
-      LOGE("failed to redefine %s: jvmtiError %d", className.c_str(), error);
+      LOGE("failed to redefine %s: jvmtiError %d", definitions[0].className.c_str(), error);
     }
 
     const unsigned char reply = static_cast<unsigned char>(error);

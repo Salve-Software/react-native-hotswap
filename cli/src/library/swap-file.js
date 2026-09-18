@@ -10,10 +10,10 @@ export async function swapFile(path, config) {
 
   try {
     const className = readClassName(path);
-    const { dex, classCount } = buildDex({ className, ...config });
-    const error = await sendRedefinition({ className, dex }, config.port);
+    const definitions = buildDex({ className, ...config });
+    const error = await sendRedefinition(definitions, config.port);
     const took = Date.now() - started;
-    const extra = classCount > 1 ? ` +${classCount - 1}` : '';
+    const extra = definitions.length > 1 ? ` +${definitions.length - 1}` : '';
 
     console.log(
       error === 0

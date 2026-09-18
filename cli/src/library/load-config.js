@@ -8,6 +8,7 @@ export function loadConfig(root) {
   const defaults = {
     root,
     port: 8099,
+    minApi: 24,
     watch: join(root, 'android/src/main/java'),
     project: findGradle(root),
     task: `:${pkg.name}:compileDebugKotlin`,
