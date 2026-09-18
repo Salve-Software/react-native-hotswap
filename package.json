@@ -6,14 +6,15 @@
     "hotswap": "./cli/bin/hotswap.js"
   },
   "files": [
-    "src",
-    "lib",
-    "cli",
-    "android",
-    "ios",
-    "metro.cjs",
     "*.podspec",
-    "README.md"
+    "README.md",
+    "android",
+    "cli",
+    "hotswap.rb",
+    "ios",
+    "lib",
+    "metro.cjs",
+    "src"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -70,6 +71,7 @@
   "exports": {
     ".": "./src/index.js",
     "./metro.cjs": "./metro.cjs",
+    "./hotswap.rb": "./hotswap.rb",
     "./package.json": "./package.json"
   }
 }

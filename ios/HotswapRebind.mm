@@ -1,0 +1,123 @@
+#import <Foundation/Foundation.h>
+#import <dlfcn.h>
+#import <mach-o/dyld.h>
+#import <mach-o/loader.h>
+#import <mach-o/nlist.h>
+#import <sys/mman.h>
+#import <unistd.h>
+
+#import "HotswapRebind.h"
+
+namespace {
+
+struct SymbolTable {
+  const nlist_64 *symbols;
+  const char *strings;
+  const uint32_t *indirect;
+};
+
+bool readSymbolTable(const mach_header_64 *header, intptr_t slide, SymbolTable &into) {
+  const symtab_command *symtab = nullptr;
+  const dysymtab_command *dysymtab = nullptr;
+  intptr_t linkedit = 0;
+
+  auto *command = (const load_command *)((uintptr_t)header + sizeof(mach_header_64));
+
+  for (uint32_t i = 0; i < header->ncmds; i++) {
+    if (command->cmd == LC_SEGMENT_64) {
+      auto *segment = (const segment_command_64 *)command;
+      if (strcmp(segment->segname, SEG_LINKEDIT) == 0) {
+        linkedit = slide + segment->vmaddr - segment->fileoff;
+      }
+    } else if (command->cmd == LC_SYMTAB) {
+      symtab = (const symtab_command *)command;
+    } else if (command->cmd == LC_DYSYMTAB) {
+      dysymtab = (const dysymtab_command *)command;
+    }
+
+    command = (const load_command *)((uintptr_t)command + command->cmdsize);
+  }
+
+  if (symtab == nullptr || dysymtab == nullptr || linkedit == 0) return false;
+
+  into.symbols = (const nlist_64 *)(linkedit + symtab->symoff);
+  into.strings = (const char *)(linkedit + symtab->stroff);
+  into.indirect = (const uint32_t *)(linkedit + dysymtab->indirectsymoff);
+
+  return true;
+}
+
+/** Points every slot naming a symbol the new image exports at the new implementation. */
+size_t rebindSection(const section_64 *section,
+                     intptr_t slide,
+                     const SymbolTable &table,
+                     void *replacementImage) {
+  auto **slots = (void **)(slide + section->addr);
+  const uint32_t *indirect = table.indirect + section->reserved1;
+  const size_t count = section->size / sizeof(void *);
+  size_t rebound = 0;
+
+  for (size_t i = 0; i < count; i++) {
+    const uint32_t index = indirect[i];
+    if (index == INDIRECT_SYMBOL_ABS || index == INDIRECT_SYMBOL_LOCAL) continue;
+
+    const char *name = table.strings + table.symbols[index].n_un.n_strx;
+    if (name == nullptr || name[0] != '_') continue;
+
+    void *replacement = dlsym(replacementImage, name + 1);
+    if (replacement == nullptr || replacement == slots[i]) continue;
+
+    slots[i] = replacement;
+    rebound++;
+  }
+
+  return rebound;
+}
+
+size_t rebindImage(const mach_header_64 *header, intptr_t slide, void *replacementImage) {
+  SymbolTable table{};
+  if (!readSymbolTable(header, slide, table)) return 0;
+
+  size_t rebound = 0;
+  auto *command = (const load_command *)((uintptr_t)header + sizeof(mach_header_64));
+
+  for (uint32_t i = 0; i < header->ncmds; i++) {
+    if (command->cmd == LC_SEGMENT_64) {
+      auto *segment = (const segment_command_64 *)command;
+
+      if (strcmp(segment->segname, SEG_DATA) == 0 ||
+          strcmp(segment->segname, "__DATA_CONST") == 0) {
+        auto *section = (const section_64 *)((uintptr_t)segment + sizeof(segment_command_64));
+
+        for (uint32_t j = 0; j < segment->nsects; j++, section++) {
+          const uint32_t type = section->flags & SECTION_TYPE;
+          if (type != S_LAZY_SYMBOL_POINTERS && type != S_NON_LAZY_SYMBOL_POINTERS) continue;
+
+          rebound += rebindSection(section, slide, table, replacementImage);
+        }
+      }
+    }
+
+    command = (const load_command *)((uintptr_t)command + command->cmdsize);
+  }
+
+  return rebound;
+}
+
+}  // namespace
+
+size_t HotswapRebindSymbols(void *replacementImage) {
+  size_t rebound = 0;
+
+  for (uint32_t i = 0; i < _dyld_image_count(); i++) {
+    auto *header = (const mach_header_64 *)_dyld_get_image_header(i);
+    if (header == nullptr || header->magic != MH_MAGIC_64) continue;
+
+    // Rebinding the replacement against itself would be a no-op at best and a loop at worst.
+    if (header->filetype != MH_EXECUTE && header->filetype != MH_DYLIB) continue;
+
+    rebound += rebindImage(header, _dyld_get_image_vmaddr_slide(i), replacementImage);
+  }
+
+  return rebound;
+}

@@ -6,19 +6,25 @@ import { startWatching } from '../src/library/start-watching.js';
 import { swapFile } from '../src/library/swap-file.js';
 
 const target = process.argv[2];
-const isFile = target?.endsWith('.kt');
+const isFile = /\.(kt|swift)$/.test(target ?? '');
 const path = target ? resolve(target) : process.cwd();
 const config = loadConfig(isFile ? findRoot(path) : path);
 
-execFileSync('adb', ['forward', `tcp:${config.port}`, `tcp:${config.port}`], {
-  stdio: 'ignore',
-});
+forwardAndroidPort(config.port);
 
 if (isFile) {
   process.exit((await swapFile(path, config)) ? 0 : 1);
 }
 
 startWatching(config);
+
+function forwardAndroidPort(port) {
+  try {
+    execFileSync('adb', ['forward', `tcp:${port}`, `tcp:${port}`], { stdio: 'ignore' });
+  } catch {
+    // No device attached is normal when only iOS is in play.
+  }
+}
 
 function findRoot(from) {
   let at = dirname(from);

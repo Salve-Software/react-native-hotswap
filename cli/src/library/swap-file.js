@@ -1,40 +1,10 @@
-import { relative } from 'node:path';
-import { buildDex } from './build-dex.js';
-import { findStaleSpec } from './find-stale-spec.js';
-import { readClassName } from './read-class-name.js';
-import { sendRedefinition } from './send-redefinition.js';
+import { swapKotlin } from './swap-kotlin.js';
+import { swapSwift } from './swap-swift.js';
 
-/** Swaps one Kotlin file into the running app and reports the outcome. */
-export async function swapFile(path, config) {
-  const started = Date.now();
-  const name = relative(config.root, path);
+/** Routes a saved file to whichever platform knows how to replace it. */
+export function swapFile(path, config) {
+  if (path.endsWith('.kt')) return swapKotlin(path, config);
+  if (path.endsWith('.swift')) return swapSwift(path, config);
 
-  const stale = findStaleSpec(config.specs, config.generated);
-  if (stale) {
-    console.log(
-      `  ⛔ ${name}  ${relative(config.root, stale)} changed; run codegen and rebuild`,
-    );
-
-    return false;
-  }
-
-  try {
-    const className = readClassName(path);
-    const definitions = buildDex({ className, ...config });
-    const error = await sendRedefinition(definitions, config.port);
-    const took = Date.now() - started;
-    const extra = definitions.length > 1 ? ` +${definitions.length - 1}` : '';
-
-    console.log(
-      error === 0
-        ? `  ✅ ${name}${extra}  ${took}ms`
-        : `  ❌ ${name}  jvmtiError ${error}  ${took}ms`,
-    );
-
-    return error === 0;
-  } catch (cause) {
-    console.log(`  ❌ ${name}  ${cause.message.split('\n')[0]}`);
-
-    return false;
-  }
+  return Promise.resolve(false);
 }

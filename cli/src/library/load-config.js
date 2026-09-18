@@ -9,9 +9,10 @@ export function loadConfig(root) {
   const defaults = {
     root,
     port: 8099,
+    iosPort: 8100,
     minApi: 24,
     buildTools: undefined,
-    watch: join(root, 'android/src/main/java'),
+    watch: [join(root, 'android/src/main/java'), join(root, 'ios')],
     project: findGradle(root),
     task: `:${pkg.name}:compileDebugKotlin`,
     classes: join(root, 'android/build/tmp/kotlin-classes/debug'),

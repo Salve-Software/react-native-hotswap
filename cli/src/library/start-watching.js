@@ -1,12 +1,12 @@
 import { relative } from 'node:path';
 import { swapFile } from './swap-file.js';
-import { watchKotlin } from './watch-kotlin.js';
+import { watchSources } from './watch-sources.js';
 
-/** Watches the module's Kotlin and swaps each saved file into the running app. */
+/** Watches native sources and swaps each saved file into the running app. */
 export function startWatching(config) {
-  console.log(
-    `hotswap  watching ${relative(config.root, config.watch)}  →  127.0.0.1:${config.port}`,
-  );
+  const watched = config.watch.map((at) => relative(config.root, at)).join(', ');
 
-  watchKotlin(config.watch, (path) => swapFile(path, config));
+  console.log(`hotswap  watching ${watched}`);
+
+  watchSources(config.watch, (path) => swapFile(path, config));
 }
