@@ -105,15 +105,20 @@ debuggable.
 More than you would expect. ART's structural redefinition — Android 11 and up — is not
 limited to method bodies:
 
-| Change                              | Works                      |
-| ----------------------------------- | -------------------------- |
-| Method body                         | ✅                         |
-| **New method on an existing class** | ✅                         |
-| **New field on an existing class**  | ✅                         |
-| New top-level function              | ✅                         |
-| New class                           | ✅ loads normally          |
-| **Removing** a method or field      | ⛔ ART never allows it     |
-| Changing a Nitro spec               | ⛔ refused, with a message |
+| Change                              | Works                       |
+| ----------------------------------- | --------------------------- |
+| Method body                         | ✅                          |
+| **New method on an existing class** | ✅                          |
+| **New field on an existing class**  | ✅                          |
+| New top-level function              | ✅                          |
+| **A class in a new file**           | ⛔ not in the installed apk |
+| **Removing** a method or field      | ⛔ ART never allows it      |
+| Changing a Nitro spec               | ⛔ refused, with a message  |
+
+A class in a new file is the other one. The swap of whatever references it succeeds — ART
+takes the redefinition — and then the app throws `NoClassDefFoundError` the moment that code
+runs, because the new class was never in the apk. Measured, not assumed: this page claimed
+the opposite until the example was pointed at it.
 
 Removing is the asymmetry worth knowing: you can add a method, but once the running class has
 it, taking it away needs a rebuild. Add a helper, delete it, and swaps stop working until you
