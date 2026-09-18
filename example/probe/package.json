@@ -1,0 +1,10 @@
+{
+  "name": "probe",
+  "version": "0.0.1",
+  "description": "A native module whose only job is to be swapped, in every language hotswap supports.",
+  "main": "index.js",
+  "private": true,
+  "peerDependencies": {
+    "react-native": "*"
+  }
+}
