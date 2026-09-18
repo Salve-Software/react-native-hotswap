@@ -97,7 +97,9 @@ the app's, so a generation's reload does not take it down with the React instanc
   status. The notice kind earns its place by being the only way the developer sees a swap
   without reading the terminal.
 - **The device draws what it is handed.** The banner's wording is built in the CLI, so it is
-  written once instead of once per language.
+  written once instead of once per language. It travels as two strings rather than one line,
+  because the halves are styled differently and joining them would move that decision into
+  Kotlin and Objective-C both.
 - **Capabilities are asked for, never assumed.** ART grants a different set per version.
 - **A call is reached two ways, and only one names a symbol.** A virtual call reads the
   vtable. Patching at the callee's entry sidesteps the distinction, which is why the Android

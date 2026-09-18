@@ -5,22 +5,30 @@ import android.app.Application
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.TextView
 
-/** Shows a short banner over whatever the app is drawing, the way Metro does for JavaScript. */
+/** Shows a short banner over whatever the app is drawing, in hotswap's colours, not React's. */
 internal object HotswapNotice {
 
-  private const val HOLD = 1400L
-  private const val FADE = 160L
-  private const val TOP_DP = 48
-  private const val PADDING_DP = 12
+  private const val HOLD = 1600L
+  private const val FADE = 180L
+  private const val TOP_DP = 52
+  private const val PADDING_DP = 14
+  private const val START = "#7C5CFF"
+  private const val END = "#4F46E5"
+  private const val DETAIL = "#C7C4FF"
 
   private val main = Handler(Looper.getMainLooper())
 
@@ -35,24 +43,42 @@ internal object HotswapNotice {
   }
 
   @JvmStatic
-  fun show(text: String) {
-    main.post { draw(text) }
+  fun show(title: String, detail: String) {
+    main.post { draw(title, detail) }
   }
 
-  private fun draw(text: String) {
+  private fun draw(title: String, detail: String) {
     val activity = host ?: return
     val root = activity.window?.decorView as? ViewGroup ?: return
     val view = banner?.takeIf { it.parent === root } ?: attach(activity, root)
 
     banner = view
-    view.text = text
+    view.text = styled(title, detail)
 
     main.removeCallbacksAndMessages(null)
     view.animate().cancel()
     view.alpha = 0f
-    view.animate().alpha(1f).setDuration(FADE).start()
+    view.translationY = -view.height / 3f
+    view.animate().alpha(1f).translationY(0f).setDuration(FADE).start()
 
     main.postDelayed({ view.animate().alpha(0f).setDuration(FADE).start() }, HOLD)
+  }
+
+  private fun styled(title: String, detail: String): CharSequence {
+    val text = SpannableStringBuilder(title)
+    text.setSpan(StyleSpan(Typeface.BOLD), 0, title.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+    if (detail.isEmpty()) return text
+
+    text.append("   ").append(detail)
+    text.setSpan(
+      ForegroundColorSpan(Color.parseColor(DETAIL)),
+      title.length,
+      text.length,
+      Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+    )
+
+    return text
   }
 
   private fun attach(activity: Activity, root: ViewGroup): TextView {
@@ -61,14 +87,14 @@ internal object HotswapNotice {
 
     val view = TextView(activity).apply {
       setTextColor(Color.WHITE)
-      textSize = 12f
+      textSize = 12.5f
       gravity = Gravity.CENTER
-      setPadding(padding, padding / 2, padding, padding / 2)
-      background = GradientDrawable().apply {
-        cornerRadius = padding * 1.5f
-        setColor(Color.parseColor("#DD1F1F1F"))
-      }
-      elevation = density * 8
+      setPadding(padding, padding * 2 / 3, padding, padding * 2 / 3)
+      background = GradientDrawable(
+        GradientDrawable.Orientation.LEFT_RIGHT,
+        intArrayOf(Color.parseColor(START), Color.parseColor(END)),
+      ).apply { cornerRadius = padding * 1.6f }
+      elevation = density * 10
     }
 
     root.addView(

@@ -248,7 +248,7 @@ unsigned char publishGeneration(const std::vector<std::vector<unsigned char>>& d
   return reply;
 }
 
-unsigned char showNotice(const std::string& text) {
+unsigned char showNotice(const std::string& title, const std::string& detail) {
   JNIEnv* env = nullptr;
   if (gVm->AttachCurrentThread(&env, nullptr) != JNI_OK) return 1;
 
@@ -259,14 +259,17 @@ unsigned char showNotice(const std::string& text) {
     jclass notice = found.empty() ? nullptr : found.front();
 
     if (notice != nullptr) {
-      jmethodID show = env->GetStaticMethodID(notice, "show", "(Ljava/lang/String;)V");
+      jmethodID show = env->GetStaticMethodID(
+          notice, "show", "(Ljava/lang/String;Ljava/lang/String;)V");
 
       if (show == nullptr) {
         env->ExceptionClear();
       } else {
-        jstring line = env->NewStringUTF(text.c_str());
-        env->CallStaticVoidMethod(notice, show, line);
-        env->DeleteLocalRef(line);
+        jstring first = env->NewStringUTF(title.c_str());
+        jstring second = env->NewStringUTF(detail.c_str());
+        env->CallStaticVoidMethod(notice, show, first, second);
+        env->DeleteLocalRef(first);
+        env->DeleteLocalRef(second);
         reply = 0;
       }
     }
@@ -278,10 +281,13 @@ unsigned char showNotice(const std::string& text) {
 }
 
 bool serveNotice(int client, unsigned char& reply) {
-  std::string text;
-  if (!readString(client, text)) return false;
+  std::string title;
+  if (!readString(client, title)) return false;
 
-  reply = showNotice(text);
+  std::string detail;
+  if (!readString(client, detail)) return false;
+
+  reply = showNotice(title, detail);
 
   return true;
 }

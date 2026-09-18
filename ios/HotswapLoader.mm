@@ -25,6 +25,18 @@ static BOOL readExactly(int fd, void *into, size_t size) {
   return YES;
 }
 
+static NSString *readFramed(int fd) {
+  uint32_t length = 0;
+  if (!readExactly(fd, &length, sizeof(length))) return nil;
+  length = ntohl(length);
+  if (length == 0 || length > 4096) return nil;
+
+  NSMutableData *buffer = [NSMutableData dataWithLength:length];
+  if (!readExactly(fd, buffer.mutableBytes, length)) return nil;
+
+  return [[NSString alloc] initWithData:buffer encoding:NSUTF8StringEncoding];
+}
+
 static uint8_t loadImage(NSString *path) {
   void *image = dlopen(path.UTF8String, RTLD_NOW | RTLD_LOCAL);
 
@@ -51,20 +63,20 @@ static void serveConnection(int client) {
     if (!readExactly(client, &kind, sizeof(kind))) return;
     if (kind > 2) return;
 
-    uint32_t length = 0;
-    if (!readExactly(client, &length, sizeof(length))) return;
-    length = ntohl(length);
-    if (length == 0 || length > 4096) return;
+    NSString *payload = readFramed(client);
+    if (payload == nil) return;
 
-    NSMutableData *buffer = [NSMutableData dataWithLength:length];
-    if (!readExactly(client, buffer.mutableBytes, length)) return;
-
-    NSString *payload = [[NSString alloc] initWithData:buffer encoding:NSUTF8StringEncoding];
     uint8_t reply = 0;
 
-    if (kind == 2) HotswapShowNotice(payload);
-    else if (kind == 1) reply = HotswapPublishGeneration(payload.UTF8String) ? 0 : 1;
-    else reply = loadImage(payload);
+    if (kind == 2) {
+      NSString *detail = readFramed(client);
+      if (detail == nil) return;
+      HotswapShowNotice(payload, detail);
+    } else if (kind == 1) {
+      reply = HotswapPublishGeneration(payload.UTF8String) ? 0 : 1;
+    } else {
+      reply = loadImage(payload);
+    }
 
     if (send(client, &reply, 1, 0) != 1) return;
   }

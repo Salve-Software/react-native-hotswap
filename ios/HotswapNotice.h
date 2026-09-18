@@ -1,3 +1,3 @@
 #import <Foundation/Foundation.h>
 
-void HotswapShowNotice(NSString *text);
+void HotswapShowNotice(NSString *title, NSString *detail);

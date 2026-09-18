@@ -153,16 +153,20 @@ unit outside the watched directories is not reached, which is the case worth kno
 ## On screen
 
 A swap you have to go looking for in a terminal is a swap you stop trusting. Every successful
-one draws a short banner over the running app, the way Metro does for JavaScript:
+one draws a short banner over the running app:
 
 ```
-hotswap · ProbeValues.kt
-hotswap · ProbeValues.kt · reloaded      ← a generation, so React rebuilt its instance
+Refreshing native   ProbeValues.kt
+Refreshing native   ProbeValues.kt · reloaded    ← a generation, so React rebuilt its instance
 ```
 
-It is drawn by hotswap itself rather than by React Native's dev UI, so it needs no integration
-and says the same thing on both platforms. Nothing is drawn when a swap fails — the terminal
-carries the reason, and a banner that appears either way teaches you to ignore it.
+A violet pill, deliberately not React Native's blue bar, because the two can appear together
+and you want to know at a glance which half of the app just changed. It is drawn by hotswap
+itself rather than through React Native's dev UI, so it needs no integration and looks the
+same on both platforms.
+
+Nothing is drawn when a swap fails — the terminal carries the reason, and a banner that
+appears either way teaches you to ignore it.
 
 ## When it does not work
 
