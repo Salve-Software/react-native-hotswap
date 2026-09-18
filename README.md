@@ -14,8 +14,8 @@ hotswap  watching android/src/main/java  →  127.0.0.1:8099
 | --------------------- | ----------------------------------------- |
 | Rebuild and reinstall | 10–30s, and the app restarts from scratch |
 | **hotswap, Kotlin**   | **~1s, same process**                     |
+| **hotswap, C++**      | **~0.5s Android, ~3s iOS**                |
 | **hotswap, Swift**    | **~6s, same process**                     |
-| **hotswap, C++**      | **~3s, same process**                     |
 
 ## Install
 
@@ -118,9 +118,10 @@ refuses and tells you:
 
 ## What it cannot change
 
-- **C++ on Android.** Android blocks loading code from app-writable storage, so a recompiled
-  `.so` would need root and an ELF rebinder. C++ swaps on the iOS simulator, where nothing
-  stops a dylib from loading — see below.
+- **A function shorter than sixteen bytes, on Android.** The redirect is written over the
+  original's entry and needs the room. It is reported and skipped, never written past.
+- **A file the native build does not compile.** The command comes from the project's own
+  `compile_commands.json`, so a file no target lists has nothing to derive flags from.
 - **Objective-C and Objective-C++.** Compiling a `.mm` into the patch would define its classes
   a second time, and the runtime resolves that by picking one of them. `.m` and `.mm` are left
   alone on purpose.
@@ -143,7 +144,7 @@ refuses and tells you:
 | ----------- | ------------------------------------------------ |
 | Android     | API 28 to attach, API 30 for structural changes  |
 | iOS         | simulator, and the Podfile hook below            |
-| Languages   | Kotlin on Android; Swift and C++ on iOS          |
+| Languages   | Kotlin and C++ on Android; Swift and C++ on iOS  |
 | Build       | debuggable                                       |
 | Build tools | 34, 35 or 36 — [not 37](#why-not-build-tools-37) |
 
@@ -173,7 +174,7 @@ again:
 |                                                             |                                                                                               |
 | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `Debug.attachJvmtiAgent` rejects any path containing `=`    | every install directory is base64 and ends in `==`, so the agent is reached through a symlink |
-| W^X blocks `dlopen` from app storage                        | the symlink resolves into the apk, which keeps the label that permits execution               |
+| A library may never be extracted from the apk               | the symlink points at the apk instead, and the linker reads `archive!/entry`                  |
 | `FindClass` on the agent thread sees only the system loader | app classes are found by walking `GetLoadedClasses`                                           |
 | ART accepts exactly one class def per dex                   | each class travels in its own dex, sent as one atomic batch                                   |
 
@@ -200,7 +201,7 @@ Two things to know:
 - Each swap links a dylib under a new name. dyld keys a loaded image on its install name, so
   reusing one would hand back the first handle and quietly leave the old code running.
 
-### C++, and the two ways a call finds its target
+### C++ on iOS, and the two ways a call finds its target
 
 C++ needs no rewriting: the changed file is included into a patch the pod already globs, so
 Xcode compiles it with the target's own flags and its relative includes keep resolving. The
@@ -230,6 +231,53 @@ baseline  free=7  virtual=4242
 swap 1    free=11 virtual=22     16645ms   (first build after a reinstall)
 swap 2    free=33 virtual=44      3105ms
 ```
+
+### C++ on Android, which turned out to be the easy one
+
+The same edit on Android takes one write instead of two, and lands in about half a second.
+
+A freshly compiled `.so` is delivered into the app's own data directory and loaded there,
+then an absolute branch is written over each changed function's entry:
+
+```
+ldr x16, #8
+br  x16
+.quad <the new function>
+```
+
+Because the branch sits at the original's **entry** rather than at its call sites, one write
+covers every way a call arrives — a direct PC-relative call, a PLT entry, a vtable slot. iOS
+needs a vtable scan precisely because dynamic replacement cannot do this.
+
+It also means a second swap needs no bookkeeping: the entry is overwritten again, and the
+symbol table still reports the same address it always did. The registry iOS needs has no
+counterpart here.
+
+Two things make it honest rather than lucky:
+
+- **Sixteen bytes have to belong to the function.** The room is measured on the unstripped
+  library the app was actually built from, not on the patch — an edit that grows a function
+  would otherwise report space the running code does not have. Too short is reported and
+  skipped.
+- **The compile command is the project's own.** It comes out of `compile_commands.json`, so
+  the defines, include paths and flags are the ones the installed code was built with.
+
+```
+baseline  free=10 virtual=1
+swap 1    free=555 virtual=777       519ms
+swap 2    free=42  virtual=31337     455ms
+```
+
+One more property falls out of this: a `.cpp` in a Nitro module is compiled into both apps,
+so one save swaps both. Measured with both running, from a single save:
+
+```
+  ✅ cpp/HotswapProbeImpl.cpp  481ms      (android, pid unchanged)
+  ✅ cpp/HotswapProbeImpl.cpp  6740ms     (ios, pid unchanged)
+```
+
+Only the platforms actually listening are attempted, so working against one simulator does
+not print a failure for a device that was never started.
 
 ### Why not build tools 37
 
