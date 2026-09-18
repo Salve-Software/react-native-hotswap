@@ -1,3 +1,4 @@
+export { gradleProjectName } from './gradle-project-name.js';
 export { findModuleRoot } from './find-module-root.js';
 export { findPodName } from './find-pod-name.js';
 export { findWorkspace } from './find-workspace.js';

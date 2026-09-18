@@ -6,6 +6,7 @@ import { CONFIG_FILE } from './constants/index.js';
 import {
   findPodName,
   findWorkspace,
+  gradleProjectName,
   readDeviceAbi,
   readGradleConfig,
   readXcodeConfig,
@@ -50,7 +51,9 @@ export class Configuration {
             join(root, 'cpp'),
           ],
       project: Configuration.findGradle(root),
-      task: app ? ':app:compileDebugKotlin' : `:${pkg.name}:compileDebugKotlin`,
+      task: app
+        ? ':app:compileDebugKotlin'
+        : `:${gradleProjectName(pkg.name)}:compileDebugKotlin`,
       classes: app
         ? join(root, 'android/app/build/tmp/kotlin-classes/debug')
         : join(root, 'android/build/tmp/kotlin-classes/debug'),
