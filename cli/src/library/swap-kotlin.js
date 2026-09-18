@@ -1,5 +1,6 @@
 import { relative } from 'node:path';
 import { buildDex } from './build-dex.js';
+import { explainJvmtiError } from './explain-jvmti-error.js';
 import { findStaleSpec } from './find-stale-spec.js';
 import { readClassName } from './read-class-name.js';
 import { sendRedefinition } from './send-redefinition.js';
@@ -28,7 +29,7 @@ export async function swapKotlin(path, config) {
     console.log(
       error === 0
         ? `  ✅ ${name}${extra}  ${took}ms`
-        : `  ❌ ${name}  jvmtiError ${error}  ${took}ms`,
+        : `  ❌ ${name}  ${explainJvmtiError(error)}  ${took}ms`,
     );
 
     return error === 0;

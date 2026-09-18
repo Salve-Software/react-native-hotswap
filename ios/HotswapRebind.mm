@@ -47,6 +47,14 @@ bool readSymbolTable(const mach_header_64 *header, intptr_t slide, SymbolTable &
   return true;
 }
 
+bool makeWritable(void *address, size_t size) {
+  const size_t page = (size_t)getpagesize();
+  auto start = (uintptr_t)address & ~(page - 1);
+  const size_t span = ((uintptr_t)address + size) - start;
+
+  return mprotect((void *)start, span, PROT_READ | PROT_WRITE) == 0;
+}
+
 /** Points every slot naming a symbol the new image exports at the new implementation. */
 size_t rebindSection(const section_64 *section,
                      intptr_t slide,
@@ -56,6 +64,10 @@ size_t rebindSection(const section_64 *section,
   const uint32_t *indirect = table.indirect + section->reserved1;
   const size_t count = section->size / sizeof(void *);
   size_t rebound = 0;
+
+  // __DATA_CONST is read-only once dyld has applied its fixups, so writing a slot without
+  // lifting the protection first takes the whole app down.
+  if (!makeWritable(slots, section->size)) return 0;
 
   for (size_t i = 0; i < count; i++) {
     const uint32_t index = indirect[i];
@@ -108,13 +120,17 @@ size_t rebindImage(const mach_header_64 *header, intptr_t slide, void *replaceme
 
 size_t HotswapRebindSymbols(void *replacementImage) {
   size_t rebound = 0;
+  NSString *bundle = NSBundle.mainBundle.bundlePath;
 
   for (uint32_t i = 0; i < _dyld_image_count(); i++) {
     auto *header = (const mach_header_64 *)_dyld_get_image_header(i);
     if (header == nullptr || header->magic != MH_MAGIC_64) continue;
-
-    // Rebinding the replacement against itself would be a no-op at best and a loop at worst.
     if (header->filetype != MH_EXECUTE && header->filetype != MH_DYLIB) continue;
+
+    // Only the app's own images. Rewriting a slot inside a system library would be a very
+    // expensive way to corrupt an unrelated process.
+    NSString *path = @(_dyld_get_image_name(i));
+    if (![path hasPrefix:bundle]) continue;
 
     rebound += rebindImage(header, _dyld_get_image_vmaddr_slide(i), replacementImage);
   }

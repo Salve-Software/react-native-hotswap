@@ -45,9 +45,18 @@ limited to method bodies:
 | **New field on an existing class**  | ✅                         |
 | New top-level function              | ✅                         |
 | New class                           | ✅ loads normally          |
+| **Removing** a method or field      | ⛔ ART never allows it     |
 | Changing a Nitro spec               | ⛔ refused, with a message |
 
-The last row is deliberate. A spec change means nitrogen has to regenerate the C++ bridge, so
+Removing is the asymmetry worth knowing: you can add a method, but once the running class has
+it, taking it away needs a rebuild. Add a helper, delete it, and swaps stop working until you
+restart the app — hotswap says so rather than printing a number:
+
+```
+  ❌ ToPosture.kt  a method was removed, which ART never allows; rebuild
+```
+
+The spec row is deliberate. A spec change means nitrogen has to regenerate the C++ bridge, so
 the ABI moved and swapping Kotlin against it would produce an app that half-works. hotswap
 refuses and tells you:
 

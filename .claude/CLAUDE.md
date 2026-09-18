@@ -49,6 +49,10 @@ STRUCTURAL: getState called brandNewMethod() = 7
 STRUCTURAL: new field reads 7
 ```
 
+Removing is the asymmetry: adding a method is fine, taking one away is `jvmtiError 67` and
+needs a rebuild. That turns an ordinary edit-then-undo into a dead end, so the CLI names it
+instead of printing the code.
+
 This matters because the JVMTI approach is usually described as method-bodies-only — that is
 classic `RedefineClasses`. ART's structural extension, present from Android 11, lifts it.
 Compose HotSwan moved off JVMTI to an interpreter over exactly this limit; the limit is real
