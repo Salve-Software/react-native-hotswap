@@ -13,9 +13,6 @@ size_t HotswapRebindSymbols(void *replacementImage, const char *path);
 /** Whether the image carries Swift dynamic replacements, which the runtime applies itself. */
 bool HotswapHasReplacements(const char *path);
 
-/** Where dyld mapped the image, or null when it is not loaded. */
-const void *HotswapImageBase(const char *path);
-
 #ifdef __cplusplus
 }
 #endif
