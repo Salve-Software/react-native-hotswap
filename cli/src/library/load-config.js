@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { readGradleConfig } from './read-gradle-config.js';
 
 /** Derives what to compile and where, overridable by hotswap.config.json. */
 export function loadConfig(root) {
@@ -9,6 +10,7 @@ export function loadConfig(root) {
     root,
     port: 8099,
     minApi: 24,
+    buildTools: undefined,
     watch: join(root, 'android/src/main/java'),
     project: findGradle(root),
     task: `:${pkg.name}:compileDebugKotlin`,
@@ -23,7 +25,22 @@ export function loadConfig(root) {
     if (overrides[key]) overrides[key] = resolve(root, overrides[key]);
   }
 
-  return { ...defaults, ...overrides };
+  const merged = { ...defaults, ...fromGradle(defaults.project), ...overrides };
+
+  return merged;
+}
+
+/** The build is the only source that knows how the installed APK was dexed. */
+function fromGradle(project) {
+  try {
+    const { minApi, buildTools } = readGradleConfig(project);
+
+    return Object.fromEntries(
+      Object.entries({ minApi, buildTools }).filter(([, value]) => value !== undefined),
+    );
+  } catch {
+    return {};
+  }
 }
 
 /** Finds the gradle wrapper that owns the app. */

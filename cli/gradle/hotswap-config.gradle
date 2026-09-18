@@ -1,0 +1,11 @@
+allprojects {
+  tasks.register("hotswapConfig") {
+    doLast {
+      if (!project.plugins.hasPlugin("com.android.application")) return
+
+      def android = project.extensions.findByName("android")
+      println "HOTSWAP_MIN_SDK=" + android.defaultConfig.minSdkVersion.apiLevel
+      println "HOTSWAP_BUILD_TOOLS=" + android.buildToolsVersion
+    }
+  }
+}
