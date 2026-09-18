@@ -5,12 +5,7 @@ import { join } from 'node:path';
 import { splitCommand } from './split-command.js';
 import type { CompileCommand } from '../../../../types/index.js';
 
-/**
- * Compiles one changed file into a library the running app can load.
- *
- * The command comes from the project's own build rather than being reconstructed, so the
- * flags, defines and include paths are the ones the installed code was built with.
- */
+/** Compiles one changed file into a library the running app can load. */
 export function buildSharedObject(entry: CompileCommand): string {
   const args = splitCommand(entry.command);
   const compiler = args[0] as string;
@@ -23,8 +18,7 @@ export function buildSharedObject(entry: CompileCommand): string {
     maxBuffer: 64 * 1024 * 1024,
   });
 
-  // The linker keys a library on its soname, so a name reused across swaps would come back
-  // as the one already mapped and the new file would never be loaded.
+  // The linker keys a library on its soname, so a reused name is never mapped again.
   const name = `libhotswap-patch-${Date.now()}.so`;
   const library = join(at, name);
 

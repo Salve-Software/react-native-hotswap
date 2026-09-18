@@ -40,8 +40,7 @@ export function checkSetup(config: SwapConfig, listening: Listening): string[] {
     }),
   ];
 
-  // The rest of the iOS setup only means anything once there is a pod to compile into, and
-  // reporting a missing patch file to someone who cannot swap Swift at all is noise.
+  // Without a pod there is nowhere to put a patch, so the rows below would be noise.
   if (config.workspace && config.scheme) {
     lines.push(
       report({ what: 'ios loader', ok: listening.ios, detail: `port ${config.iosPort}` }),
@@ -56,8 +55,7 @@ export function checkSetup(config: SwapConfig, listening: Listening): string[] {
   return lines;
 }
 
-// Swift and C++ are compiled through the pod the module ships, so an app with no podspec of
-// its own has nowhere to put the patch and swaps Kotlin only.
+// An app with no podspec of its own swaps Kotlin only.
 function describeTarget({ workspace, scheme }: SwapConfig): string {
   if (!workspace) return 'no workspace found, android only';
   if (!scheme) return 'no podspec here; swift and c++ compile through a pod';
@@ -65,8 +63,7 @@ function describeTarget({ workspace, scheme }: SwapConfig): string {
   return `${scheme} in ${workspace}`;
 }
 
-// A patch file that appeared after the last pod install is invisible to the target, so the
-// first swap of that language fails on something that reads as unrelated to setup.
+// A patch created after the last pod install is invisible to the target.
 function missingPatches(patchDir: string): { file: string }[] {
   return PATCHES.filter(({ file }) => !existsSync(join(patchDir, file)));
 }

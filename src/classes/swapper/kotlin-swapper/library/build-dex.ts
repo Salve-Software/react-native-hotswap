@@ -48,7 +48,7 @@ export function buildDex({
   return collectDexes(out);
 }
 
-/** ART accepts exactly one class def per redefinition, so each class travels in its own dex. */
+// ART accepts exactly one class def per redefinition.
 function collectDexes(out: string): ClassDefinition[] {
   const found: ClassDefinition[] = [];
 
@@ -71,7 +71,7 @@ function collectDexes(out: string): ClassDefinition[] {
   return found;
 }
 
-/** d8 37 widens private lambda methods, which ART then refuses as a flag mismatch. */
+// d8 37 widens private lambda methods, which ART refuses as a flag mismatch.
 function dexer(buildTools: string | undefined): string {
   const sdk = process.env['ANDROID_HOME'] ?? join(homedir(), 'Library/Android/sdk');
   const tools = join(sdk, 'build-tools');

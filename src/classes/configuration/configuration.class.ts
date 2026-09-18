@@ -62,7 +62,6 @@ export class Configuration {
     };
   }
 
-  /** Xcode is the only source that knows where the objects the app was built from live. */
   private static fromXcode({ workspace, scheme }: SwapConfig): Partial<SwapConfig> {
     if (!workspace || !scheme) return {};
 
@@ -73,7 +72,6 @@ export class Configuration {
     }
   }
 
-  /** The build is the only source that knows how the installed APK was dexed. */
   private static fromGradle(project: string): Partial<SwapConfig> {
     try {
       const { minApi, buildTools } = readGradleConfig(project);
@@ -86,7 +84,6 @@ export class Configuration {
     }
   }
 
-  /** An app keeps its Kotlin under android/app; a library keeps it under android/src. */
   private static isApp(root: string): boolean {
     return (
       existsSync(join(root, 'android/app/src/main/java')) &&

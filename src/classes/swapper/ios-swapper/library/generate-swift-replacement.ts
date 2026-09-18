@@ -24,7 +24,6 @@ function imports(source: string): string {
   return `${found.join('\n')}\n`;
 }
 
-/** Only methods are replaceable; a stored property has no implementation to swap. */
 function findMethods(source: string): Method[] {
   const found: Method[] = [];
   const opener =
@@ -42,20 +41,14 @@ function findMethods(source: string): Method[] {
       body: read.body,
     });
 
-    // A function declared inside this body is local to it and cannot be replaced, so the
-    // scan resumes after the body rather than walking into it.
+    // A nested function is local and cannot be replaced, so the scan resumes past the body.
     opener.lastIndex = read.end;
   }
 
   return found;
 }
 
-/**
- * Returns the body between matching braces, counting only braces that are really code.
- *
- * A brace inside a string or a comment would otherwise close the body early and swallow
- * whatever followed it.
- */
+// A brace inside a string or a comment would otherwise close the body early.
 function readBody(
   source: string,
   openBrace: number,
@@ -83,7 +76,6 @@ function readBody(
   return undefined;
 }
 
-/** How far to jump to get past a string or a comment starting here, or here if neither. */
 function skipNonCode(source: string, at: number): number {
   if (source.startsWith('//', at)) {
     const line = source.indexOf('\n', at);
@@ -107,7 +99,7 @@ function skipNonCode(source: string, at: number): number {
   return source.length;
 }
 
-/** The attribute names the original by its argument labels, which is what Swift matches on. */
+// Swift matches a replacement by argument labels, not by parameter names.
 function toReplacement({ name, parameters, returns, body }: Method): string {
   const labels = parameters
     .split(',')

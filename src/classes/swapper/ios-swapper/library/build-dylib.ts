@@ -11,13 +11,7 @@ type Where = Pick<
   'workspace' | 'scheme' | 'derivedData' | 'arch' | 'iosTarget' | 'patchDir'
 >;
 
-/**
- * Turns a changed Swift or C++ file into a dylib the running app can adopt.
- *
- * The change is written into a file the pod already globs, so Xcode compiles it with the
- * settings the app was built with. Reproducing swiftc's invocation is the usual approach and
- * it drifts constantly.
- */
+/** Turns a changed Swift or C++ file into a dylib the running app can adopt. */
 export function buildDylib(
   path: string,
   { workspace, scheme, derivedData, arch, iosTarget, patchDir }: Where,
@@ -51,15 +45,12 @@ export function buildDylib(
 
     return link(objectFor({ derivedData, scheme, arch, patch }), iosTarget);
   } finally {
-    // The object is already linked, and a failed build must not leave the change behind
-    // either, so the developer's working tree stays clean between saves.
+    // The object is already linked, so the file can go back to being empty.
     writeFileSync(file, patch.placeholder);
   }
 }
 
-// CocoaPods globs sources at install time, so a file that appears later is invisible to the
-// target until the next install. Creating every patch at once means one pod install covers
-// both languages rather than one per language, on separate days.
+// CocoaPods globs at install time, so a file created later is invisible until the next one.
 function ensurePatches(patchDir: string): void {
   const missing = PATCHES.filter(({ file }) => !existsSync(join(patchDir, file)));
   if (missing.length === 0) return;
@@ -73,14 +64,11 @@ function ensurePatches(patchDir: string): void {
   throw new Error(`created ${names}; run pod install once, then save again`);
 }
 
-/** Only the patch object is linked: a dylib of the whole module loads a second copy of its
- * Swift metadata and takes the app down. */
+// Linking the whole module would load a second copy of its Swift metadata and kill the app.
 function link(object: string, iosTarget: string): string {
   if (!existsSync(object)) throw new Error(`xcode produced no object at ${object}`);
 
-  // dyld keys a loaded image on its install name, so a second dylib called patch.dylib comes
-  // back as the handle of the first and the new file is never mapped. The name has to differ
-  // on every swap.
+  // dyld keys a loaded image on its install name, so a reused name is never mapped again.
   const out = join(mkdtempSync(join(tmpdir(), 'hotswap-')), `patch-${Date.now()}.dylib`);
 
   execFileSync(

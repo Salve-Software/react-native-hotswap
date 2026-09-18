@@ -25,7 +25,6 @@ export class Hotswap {
     this.ios = new IosSwapper(this.config);
   }
 
-  /** Replaces one saved file on every platform that can take it. */
   async swap(path: string): Promise<boolean> {
     let swapped = false;
 
@@ -36,7 +35,6 @@ export class Hotswap {
     return swapped;
   }
 
-  /** Watches the project's native sources until the process ends. */
   watch(): void {
     const watched = this.config.watch
       .map((at) => relative(this.config.root, at))
@@ -47,7 +45,6 @@ export class Hotswap {
     new Watcher(this.config.watch, (path) => this.swap(path)).start();
   }
 
-  /** Reports what is wired up, so setup fails loudly rather than at the first save. */
   async check(): Promise<string[]> {
     forwardPort(this.config.port);
 
@@ -65,14 +62,8 @@ export class Hotswap {
     return path.endsWith('.kt') ? this.kotlin : this.native;
   }
 
-  /**
-   * Narrows a shared file to the platforms actually running.
-   *
-   * A C++ file belongs to both, and someone developing against one simulator does not want
-   * a failure line for the device they never started. A file only one platform can take is
-   * left alone, so its own diagnosis is what gets printed.
-   */
   private async intendedFor(path: string): Promise<Platform[]> {
+    // Only a shared file narrows; a single-platform file keeps its own diagnosis.
     const platforms = platformsFor(path);
     if (platforms.length < 2) return platforms;
 

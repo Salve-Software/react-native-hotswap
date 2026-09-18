@@ -95,11 +95,9 @@ jvmtiError redefine(const std::vector<Definition>& definitions) {
 
   jvmtiError result = JVMTI_ERROR_INVALID_CLASS;
 
-  // Everything JNI has to finish inside this block: the local references are released by
-  // LoadedClasses' destructor, and doing that after detaching aborts the runtime.
+  // Releasing LoadedClasses' local references after detaching aborts the runtime.
   {
-    // One snapshot for the whole batch. GetLoadedClasses walks every class the runtime
-    // holds, and calling it per definition turned a four-class swap into four full scans.
+    // GetLoadedClasses walks every class the runtime holds, so the batch takes one snapshot.
     const LoadedClasses loaded(env);
 
     std::vector<jvmtiClassDefinition> classes;
@@ -108,8 +106,7 @@ jvmtiError redefine(const std::vector<Definition>& definitions) {
     for (const Definition& definition : definitions) {
       jclass target = loaded.find(definition.className);
 
-      // A lambda the runtime has not reached yet cannot be redefined, and does not need to
-      // be: it will load from the dex on disk. Skipping beats failing the whole swap.
+      // A class not reached yet will load from the dex on disk, so skipping beats failing.
       if (target == nullptr) {
         LOGI("skipping %s, not loaded yet", definition.className.c_str());
         continue;
@@ -258,8 +255,7 @@ void listenForever(int port, std::string filesDir) {
     const int client = accept(server, nullptr, nullptr);
 
     if (client < 0) {
-      // EINTR and friends are worth retrying; anything else means the listening socket is
-      // gone, and looping on it would spin a core for the life of the app.
+      // Anything but EINTR means the socket is gone, and looping would spin a core.
       if (errno == EINTR || errno == ECONNABORTED) continue;
 
       LOGE("accept failed: %s", std::strerror(errno));

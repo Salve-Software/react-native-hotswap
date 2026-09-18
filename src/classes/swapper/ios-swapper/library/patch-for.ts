@@ -11,9 +11,7 @@ export function patchFor(path: string, source: string): Patch | undefined {
   return replacement ? { ...SWIFT_PATCH, contents: replacement } : undefined;
 }
 
-// Including the translation unit is what gets it compiled with the target's own flags and
-// header search paths. The absolute path keeps its own relative includes resolving, since a
-// quoted include is looked up beside the file that wrote it.
+// A quoted include resolves beside the file that wrote it, so the path has to be absolute.
 function include(path: string): string {
   return `#include "${path}"\n`;
 }

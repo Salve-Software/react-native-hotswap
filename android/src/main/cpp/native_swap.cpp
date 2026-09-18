@@ -13,8 +13,7 @@
 
 namespace {
 
-// ldr x16, #8 ; br x16 ; .quad target. Sixteen bytes, so a shorter original would have its
-// neighbour overwritten — which is why the size travels with the name.
+// ldr x16, #8 ; br x16 ; .quad target. A shorter original would lose its neighbour.
 constexpr size_t kJumpSize = 16;
 
 unsigned int gLoaded = 0;
@@ -27,7 +26,6 @@ int collectPath(dl_phdr_info* info, size_t, void* into) {
   return 0;
 }
 
-/** Every library already mapped into the process, so the original can be found in one. */
 std::vector<std::string> loadedLibraries() {
   std::vector<std::string> paths;
   dl_iterate_phdr(collectPath, &paths);
@@ -35,12 +33,7 @@ std::vector<std::string> loadedLibraries() {
   return paths;
 }
 
-/**
- * Finds a symbol in the libraries the app already had.
- *
- * RTLD_NOLOAD returns a handle only for something already mapped, so this asks the linker
- * rather than parsing ELF, and never pulls a new library in by accident.
- */
+// RTLD_NOLOAD asks the linker without ever pulling a new library in.
 void* findOriginal(const std::vector<std::string>& paths, const char* name, void* except) {
   for (const std::string& path : paths) {
     void* handle = dlopen(path.c_str(), RTLD_NOW | RTLD_NOLOAD);
@@ -59,7 +52,6 @@ void* findOriginal(const std::vector<std::string>& paths, const char* name, void
   return nullptr;
 }
 
-/** Writes an absolute branch over the original's entry, which redirects every call to it. */
 bool writeJump(void* from, void* to) {
   const size_t page = static_cast<size_t>(getpagesize());
   auto start = reinterpret_cast<uintptr_t>(from) & ~(page - 1);
@@ -75,8 +67,7 @@ bool writeJump(void* from, void* to) {
   std::memcpy(from, code, sizeof(code));
   std::memcpy(static_cast<char*>(from) + sizeof(code), &to, sizeof(to));
 
-  // The old bytes may still sit in the instruction cache, and without this the core keeps
-  // running them for an unpredictable while.
+  // The old bytes may still sit in the instruction cache.
   __builtin___clear_cache(static_cast<char*>(from),
                           static_cast<char*>(from) + kJumpSize);
 
@@ -98,8 +89,7 @@ bool write(const std::string& path, const std::vector<unsigned char>& image) {
 unsigned char hotswapLoadNative(const std::string& filesDir,
                                 const std::vector<unsigned char>& image,
                                 const std::vector<NativeSymbol>& symbols) {
-  // The linker keys a library on the path it was opened with, so a name reused across swaps
-  // comes back as the handle of the first and the new file is never mapped.
+  // The linker keys a library on the path it was opened with, so the name must differ.
   const std::string path = filesDir + "/hotswap-patch-" + std::to_string(gLoaded++) + ".so";
 
   if (!write(path, image)) {
