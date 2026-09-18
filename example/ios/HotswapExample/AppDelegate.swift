@@ -2,6 +2,7 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import RNHotswap
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -34,6 +35,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 
 class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
+  // The one line hotswap needs on iOS. The selector is spelled out because Swift cannot see
+  // it: the delegate protocol only conforms to RCTTurboModuleManagerDelegate under
+  // __cplusplus. Returning nil is what React Native already expects for "not mine".
+  @objc(getModuleClassFromName:)
+  func hotswapModuleClass(_ name: UnsafePointer<CChar>) -> AnyClass? {
+    Hotswap.moduleClass(fromName: name)
+  }
+
   override func sourceURL(for bridge: RCTBridge) -> URL? {
     self.bundleURL()
   }

@@ -36,8 +36,6 @@ export class Hotswap {
   }
 
   async swap(path: string): Promise<boolean> {
-    // A deleted file is an ordinary edit, not a failure: whatever it declared is still
-    // loaded and nothing that compiles refers to it any more.
     if (!existsSync(path)) {
       console.log(`  ⌫ ${relative(this.config.root, path)}  removed`);
 

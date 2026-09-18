@@ -44,3 +44,11 @@ void *HotswapClassNamed(const char *name) {
 
   return factory == nullptr ? nullptr : factory(name);
 }
+
+@implementation Hotswap
+
++ (Class)moduleClassFromName:(const char *)name {
+  return (__bridge Class)HotswapClassNamed(name);
+}
+
+@end

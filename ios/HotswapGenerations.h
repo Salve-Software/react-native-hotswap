@@ -2,6 +2,17 @@
 
 #include <stdbool.h>
 
+#ifdef __OBJC__
+#import <Foundation/Foundation.h>
+
+/** What a React Native delegate asks before falling back to the app's own classes. */
+@interface Hotswap : NSObject
+
++ (Class)moduleClassFromName:(const char *)name;
+
+@end
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

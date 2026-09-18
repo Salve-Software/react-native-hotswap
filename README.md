@@ -66,6 +66,51 @@ Kotlin is the part that does not care. Swift and C++ are compiled through the po
 ships, so an app with no podspec of its own swaps Kotlin only — `--check` says so rather than
 letting the first save fail on a missing build setting.
 
+## A file that did not exist a moment ago
+
+Patching cannot add a class, remove a method or change a hierarchy — the shape of what is
+already loaded is fixed. When ART or the Swift compiler refuses on those grounds, hotswap
+stops patching and **publishes a generation** instead: the module is rebuilt, loaded beside
+what is running, and React Native is asked to build its next instance from it.
+
+```
+  ↻ probe/android/.../BornAtRuntime.kt  class not loaded yet
+  ♻️  probe/android/.../BornAtRuntime.kt  reloaded from a new generation  942ms
+```
+
+Nothing is stitched into anything, so a new file is no harder than a changed line.
+
+**What it costs.** A generation recreates the React instance, so JS state goes back to where
+the app starts. The process is never restarted and it takes about a second, but it is not
+Fast Refresh — patching is, and it stays the first thing tried.
+
+### Turning it on
+
+Android, in `MainApplication.kt`:
+
+```kotlin
+override val reactHost: ReactHost by lazy {
+  HotswapReactHost.create(applicationContext) { PackageList(this).packages }
+}
+```
+
+iOS, in your `RCTDefaultReactNativeFactoryDelegate` subclass:
+
+```swift
+import RNHotswap
+
+@objc(getModuleClassFromName:)
+func hotswapModuleClass(_ name: UnsafePointer<CChar>) -> AnyClass? {
+  Hotswap.moduleClass(fromName: name)
+}
+```
+
+Returning nil is what React Native already reads as "not mine", so the line is inert until a
+generation exists. The selector is spelled out because Swift cannot see the method: the
+delegate protocol only conforms to `RCTTurboModuleManagerDelegate` under `__cplusplus`.
+
+Without these, patching still works and generations do not.
+
 ## Headers
 
 Editing a `.h` or `.hpp` swaps everything that reaches it, since a header compiles into
