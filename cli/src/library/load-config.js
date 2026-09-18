@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { findPodName } from './find-pod-name.js';
 import { findWorkspace } from './find-workspace.js';
 import { readGradleConfig } from './read-gradle-config.js';
+import { readXcodeConfig } from './read-xcode-config.js';
 
 /** Derives what to compile and where, overridable by hotswap.config.json. */
 export function loadConfig(root) {
@@ -25,7 +26,7 @@ export function loadConfig(root) {
       : join(root, 'android/build/tmp/kotlin-classes/debug'),
     workspace: findWorkspace(root),
     scheme: findPodName(root),
-    derivedData: join(root, '.hotswap/derived-data'),
+    derivedData: undefined,
     patchDir: join(root, 'ios'),
     arch: 'arm64',
     iosTarget: 'arm64-apple-ios15.1-simulator',
@@ -42,9 +43,23 @@ export function loadConfig(root) {
 
   if (overrides.watch) overrides.watch = overrides.watch.map((at) => resolve(root, at));
 
-  const merged = { ...defaults, ...fromGradle(defaults.project), ...overrides };
+  return {
+    ...defaults,
+    ...fromGradle(defaults.project),
+    ...fromXcode(defaults),
+    ...overrides,
+  };
+}
 
-  return merged;
+/** Xcode is the only source that knows where the objects the app was built from live. */
+function fromXcode({ workspace, scheme }) {
+  if (!workspace || !scheme) return {};
+
+  try {
+    return readXcodeConfig({ workspace, scheme });
+  } catch {
+    return {};
+  }
 }
 
 /** An app keeps its Kotlin under android/app; a library keeps it under android/src. */
