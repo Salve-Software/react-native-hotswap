@@ -4,6 +4,8 @@
 #import <mach-o/loader.h>
 #import <mach-o/nlist.h>
 #import <sys/mman.h>
+#import <limits.h>
+#import <stdlib.h>
 #import <unistd.h>
 
 #import "HotswapRebind.h"
@@ -130,12 +132,11 @@ size_t rebindImage(const mach_header_64 *header, intptr_t slide, const Replaceme
 
 }  // namespace
 
-size_t HotswapRebindSymbols(void *replacementImage) {
-  Dl_info probe{};
-  void *anchor = dlsym(replacementImage, "__mh_dylib_header");
-  if (anchor == nullptr || dladdr(anchor, &probe) == 0) return 0;
+size_t HotswapRebindSymbols(void *replacementImage, const char *path) {
+  const void *base = HotswapImageBase(path);
+  if (base == nullptr) return 0;
 
-  const Replacement replacement{replacementImage, probe.dli_fbase};
+  const Replacement replacement{replacementImage, base};
 
   size_t rebound = 0;
   NSString *bundle = NSBundle.mainBundle.bundlePath;
@@ -158,12 +159,28 @@ size_t HotswapRebindSymbols(void *replacementImage) {
   return rebound;
 }
 
-bool HotswapHasReplacements(void *image) {
-  Dl_info info{};
-  void *anchor = dlsym(image, "__mh_dylib_header");
-  if (anchor == nullptr || dladdr(anchor, &info) == 0) return false;
+const void *HotswapImageBase(const char *path) {
+  // dlsym cannot be trusted to find the image's own header, so the image is located by name.
+  // Both sides go through realpath first: a temporary file lives under /var, and dyld records
+  // it as /private/var.
+  char wanted[PATH_MAX];
+  if (realpath(path, wanted) == nullptr) return nullptr;
 
-  auto *header = (const mach_header_64 *)info.dli_fbase;
+  for (uint32_t i = 0; i < _dyld_image_count(); i++) {
+    const char *name = _dyld_get_image_name(i);
+    if (name == nullptr) continue;
+
+    char resolved[PATH_MAX];
+    if (realpath(name, resolved) == nullptr) continue;
+    if (strcmp(resolved, wanted) == 0) return _dyld_get_image_header(i);
+  }
+
+  return nullptr;
+}
+
+bool HotswapHasReplacements(const char *path) {
+  auto *header = (const mach_header_64 *)HotswapImageBase(path);
+  if (header == nullptr) return false;
   auto *command = (const load_command *)((uintptr_t)header + sizeof(mach_header_64));
 
   for (uint32_t i = 0; i < header->ncmds; i++) {
@@ -172,7 +189,11 @@ bool HotswapHasReplacements(void *image) {
       auto *section = (const section_64 *)((uintptr_t)segment + sizeof(segment_command_64));
 
       for (uint32_t j = 0; j < segment->nsects; j++, section++) {
-        if (strcmp(section->sectname, "__swift5_replace") == 0) return true;
+        // sectname is a fixed 16-byte field and "__swift5_replace" fills it exactly, so
+        // strcmp would run past the end into segname.
+        if (strncmp(section->sectname, "__swift5_replace", sizeof(section->sectname)) == 0) {
+          return true;
+        }
       }
     }
 

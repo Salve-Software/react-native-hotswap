@@ -5,7 +5,11 @@ import { tmpdir } from 'node:os';
 
 /** Compiles the module and dexes the target class and its synthetic siblings, one dex each. */
 export function buildDex({ className, project, task, classes, minApi, buildTools }) {
-  execFileSync('./gradlew', [task, '-q'], { cwd: project, stdio: 'pipe' });
+  execFileSync('./gradlew', [task, '-q'], {
+    cwd: project,
+    stdio: 'pipe',
+    maxBuffer: 64 * 1024 * 1024,
+  });
 
   const parts = className.split('/');
   const simple = parts.pop();
@@ -23,7 +27,7 @@ export function buildDex({ className, project, task, classes, minApi, buildTools
   execFileSync(
     dexer(buildTools),
     ['--min-api', String(minApi), '--file-per-class', '--output', out, ...targets],
-    { stdio: 'pipe' },
+    { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 },
   );
 
   return collectDexes(out);

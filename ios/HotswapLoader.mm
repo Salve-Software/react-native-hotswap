@@ -30,8 +30,8 @@ static uint8_t loadImage(NSString *path) {
     return 1;
   }
 
-  const bool replaced = HotswapHasReplacements(image);
-  size_t rebound = HotswapRebindSymbols(image);
+  const bool replaced = HotswapHasReplacements(path.UTF8String);
+  size_t rebound = HotswapRebindSymbols(image, path.UTF8String);
 
   NSLog(@"[Hotswap] loaded %@, %@, rebound %zu symbol(s)", path.lastPathComponent,
         replaced ? @"swift replacements applied" : @"no swift replacements", rebound);

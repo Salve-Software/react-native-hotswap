@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { checkSetup } from '../src/library/check-setup.js';
 import { loadConfig } from '../src/library/load-config.js';
 import { startWatching } from '../src/library/start-watching.js';
@@ -38,7 +39,7 @@ function forwardAndroidPort(port) {
 function findRoot(from) {
   let at = dirname(from);
 
-  while (at !== '/' && !at.endsWith('/android')) at = dirname(at);
+  while (at !== '/' && !existsSync(join(at, 'package.json'))) at = dirname(at);
 
-  return dirname(at);
+  return at;
 }

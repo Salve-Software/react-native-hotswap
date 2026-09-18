@@ -12,8 +12,10 @@ export async function swapSwift(path, config) {
     const error = await sendImage(dylib, config.iosPort);
     const took = Date.now() - started;
 
+    const reason = error === 1 ? 'dlopen failed' : 'loaded but replaced nothing';
+
     console.log(
-      error === 0 ? `  ✅ ${name}  ${took}ms` : `  ❌ ${name}  dlopen failed  ${took}ms`,
+      error === 0 ? `  ✅ ${name}  ${took}ms` : `  ❌ ${name}  ${reason}  ${took}ms`,
     );
 
     return error === 0;

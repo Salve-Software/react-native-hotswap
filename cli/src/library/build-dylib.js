@@ -42,7 +42,7 @@ export function buildDylib(
       derivedData,
       'build',
     ],
-    { stdio: 'pipe' },
+    { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 },
   );
 
   return link(objectFor(derivedData, scheme, arch), iosTarget);
@@ -74,7 +74,7 @@ function link(object, iosTarget) {
       'dynamic_lookup',
       object,
     ],
-    { stdio: 'pipe' },
+    { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 },
   );
 
   return out;
