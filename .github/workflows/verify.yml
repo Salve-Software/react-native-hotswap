@@ -1,16 +1,35 @@
-name: verify
+name: Verify
+
+permissions:
+  contents: read
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   javascript:
+    name: Typecheck, lint and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+
+      - name: Cache bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run lint
@@ -19,12 +38,16 @@ jobs:
       - run: bun run build
 
   agent:
+    name: Build the agent
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Setup JDK 17
+        uses: actions/setup-java@v5
         with:
-          distribution: temurin
+          distribution: 'zulu'
           java-version: '17'
+          cache: 'gradle'
+
       # The agent cannot be unit tested, so the least this can do is prove it still builds.
-      - run: ./gradlew :android:assembleDebug
+      - run: ./gradlew :android:assembleDebug --no-daemon
