@@ -43,36 +43,44 @@ void resolveStructuralRedefine() {
   gJvmti->Deallocate(reinterpret_cast<unsigned char*>(extensions));
 }
 
-jclass findLoadedClass(JNIEnv* env, const std::string& className) {
-  const std::string wanted = "L" + className + ";";
-
-  jint count = 0;
-  jclass* classes = nullptr;
-  if (gJvmti->GetLoadedClasses(&count, &classes) != JVMTI_ERROR_NONE) {
-    return nullptr;
-  }
-
-  jclass found = nullptr;
-  for (jint i = 0; i < count && found == nullptr; i++) {
-    char* signature = nullptr;
-    if (gJvmti->GetClassSignature(classes[i], &signature, nullptr) != JVMTI_ERROR_NONE) {
-      continue;
-    }
-    if (signature != nullptr && wanted == signature) {
-      found = static_cast<jclass>(env->NewLocalRef(classes[i]));
-    }
-    gJvmti->Deallocate(reinterpret_cast<unsigned char*>(signature));
-  }
-
-  for (jint i = 0; i < count; i++) env->DeleteLocalRef(classes[i]);
-  gJvmti->Deallocate(reinterpret_cast<unsigned char*>(classes));
-
-  return found;
-}
-
 struct Definition {
   std::string className;
   std::vector<unsigned char> dex;
+};
+
+class LoadedClasses {
+ public:
+  explicit LoadedClasses(JNIEnv* env) : env_(env) {
+    if (gJvmti->GetLoadedClasses(&count_, &classes_) != JVMTI_ERROR_NONE) count_ = 0;
+  }
+
+  ~LoadedClasses() {
+    for (jint i = 0; i < count_; i++) env_->DeleteLocalRef(classes_[i]);
+    if (classes_ != nullptr) gJvmti->Deallocate(reinterpret_cast<unsigned char*>(classes_));
+  }
+
+  jclass find(const std::string& className) const {
+    const std::string wanted = "L" + className + ";";
+
+    for (jint i = 0; i < count_; i++) {
+      char* signature = nullptr;
+      if (gJvmti->GetClassSignature(classes_[i], &signature, nullptr) != JVMTI_ERROR_NONE) {
+        continue;
+      }
+
+      const bool match = signature != nullptr && wanted == signature;
+      gJvmti->Deallocate(reinterpret_cast<unsigned char*>(signature));
+
+      if (match) return classes_[i];
+    }
+
+    return nullptr;
+  }
+
+ private:
+  JNIEnv* env_;
+  jint count_ = 0;
+  jclass* classes_ = nullptr;
 };
 
 jvmtiError redefine(const std::vector<Definition>& definitions) {
@@ -81,37 +89,44 @@ jvmtiError redefine(const std::vector<Definition>& definitions) {
     return JVMTI_ERROR_INTERNAL;
   }
 
-  std::vector<jvmtiClassDefinition> classes;
-  classes.reserve(definitions.size());
+  jvmtiError result = JVMTI_ERROR_INVALID_CLASS;
 
-  for (const Definition& definition : definitions) {
-    jclass target = findLoadedClass(env, definition.className);
+  // Everything JNI has to finish inside this block: the local references are released by
+  // LoadedClasses' destructor, and doing that after detaching aborts the runtime.
+  {
+    // One snapshot for the whole batch. GetLoadedClasses walks every class the runtime
+    // holds, and calling it per definition turned a four-class swap into four full scans.
+    const LoadedClasses loaded(env);
 
-    // A lambda the runtime has not reached yet cannot be redefined, and does not need to
-    // be: it will load from the dex on disk. Skipping beats failing the whole swap.
-    if (target == nullptr) {
-      LOGI("skipping %s, not loaded yet", definition.className.c_str());
-      continue;
+    std::vector<jvmtiClassDefinition> classes;
+    classes.reserve(definitions.size());
+
+    for (const Definition& definition : definitions) {
+      jclass target = loaded.find(definition.className);
+
+      // A lambda the runtime has not reached yet cannot be redefined, and does not need to
+      // be: it will load from the dex on disk. Skipping beats failing the whole swap.
+      if (target == nullptr) {
+        LOGI("skipping %s, not loaded yet", definition.className.c_str());
+        continue;
+      }
+
+      jvmtiClassDefinition entry{};
+      entry.klass = target;
+      entry.class_byte_count = static_cast<jint>(definition.dex.size());
+      entry.class_bytes = definition.dex.data();
+      classes.push_back(entry);
     }
 
-    jvmtiClassDefinition entry{};
-    entry.klass = target;
-    entry.class_byte_count = static_cast<jint>(definition.dex.size());
-    entry.class_bytes = definition.dex.data();
-    classes.push_back(entry);
+    if (!classes.empty()) {
+      const jint count = static_cast<jint>(classes.size());
+
+      result = gStructuralRedefine != nullptr
+                   ? gStructuralRedefine(gJvmti, count, classes.data())
+                   : gJvmti->RedefineClasses(count, classes.data());
+    }
   }
 
-  if (classes.empty()) {
-    gVm->DetachCurrentThread();
-    return JVMTI_ERROR_INVALID_CLASS;
-  }
-
-  const jint count = static_cast<jint>(classes.size());
-  const jvmtiError result = gStructuralRedefine != nullptr
-                                ? gStructuralRedefine(gJvmti, count, classes.data())
-                                : gJvmti->RedefineClasses(count, classes.data());
-
-  for (const jvmtiClassDefinition& entry : classes) env->DeleteLocalRef(entry.klass);
   gVm->DetachCurrentThread();
 
   return result;
