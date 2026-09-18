@@ -11,7 +11,7 @@
     "android/src",
     "android/CMakeLists.txt",
     "ios",
-    "gradle",
+    "gradle/hotswap-config.gradle",
     "metro.cjs",
     "hotswap.rb",
     "*.podspec",
