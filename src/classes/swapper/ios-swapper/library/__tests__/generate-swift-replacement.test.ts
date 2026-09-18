@@ -124,4 +124,21 @@ describe('generateSwiftReplacement, on source that breaks a naive scan', () => {
   it('a file of top-level functions produces nothing, since there is no type to extend', () => {
     expect(generateSwiftReplacement('func a() -> Int { return 1 }\n')).toBeUndefined();
   });
+
+  it('an attribute on the same line does not hide the class, which @objc always is', () => {
+    const out = generateSwiftReplacement(
+      '@objc public class Probe: NSObject {\n  func value() -> Int { return 1 }\n}\n',
+    );
+
+    expect(out).toContain('extension Probe {');
+    expect(out).toContain('@_dynamicReplacement(for: value())');
+  });
+
+  it('an attribute carrying a name is read the same way', () => {
+    expect(
+      generateSwiftReplacement(
+        '@objc(RCTProbe) final class Probe: NSObject {\n  func v() -> Int { return 1 }\n}\n',
+      ),
+    ).toContain('extension Probe {');
+  });
 });

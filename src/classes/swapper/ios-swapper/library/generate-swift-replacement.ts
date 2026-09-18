@@ -31,7 +31,7 @@ function toExtension({ name, body }: Declaration): string | undefined {
 function findDeclarations(source: string): Declaration[] {
   const found: Declaration[] = [];
   const opener =
-    /^[ \t]*(?:@\w+[^\n]*\n\s*)*(?:(?:public|internal|private|fileprivate|open|final)\s+)*(?:class|struct|enum|actor|extension)\s+(\w+)[^{]*\{/gm;
+    /^[ \t]*(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|internal|private|fileprivate|open|final)\s+)*(?:class|struct|enum|actor|extension)\s+(\w+)[^{]*\{/gm;
 
   let match: RegExpExecArray | null;
   while ((match = opener.exec(source)) !== null) {

@@ -88,7 +88,10 @@ export class Hotswap {
       const outcome: Outcome = await this.swapperFor(platform, path).swap(path);
 
       if (outcome === 'swapped') swapped = true;
-      if (outcome === 'needs-generation' && (await this.generation.publish(path))) {
+      if (
+        outcome === 'needs-generation' &&
+        (await this.generation.publish(path, platform))
+      ) {
         swapped = true;
       }
     }

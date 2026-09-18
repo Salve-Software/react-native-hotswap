@@ -19,8 +19,18 @@ export class IosSwapper implements Swapper {
     const started = Date.now();
     const name = relative(this.config.root, path);
 
+    let dylib: string;
     try {
-      const dylib = buildDylib(path, this.config);
+      dylib = buildDylib(path, this.config);
+    } catch (cause) {
+      // A replacement only compiles against methods the running app already has, so a patch
+      // that will not build is how a new method or a new file announces itself here.
+      console.log(`  ↻ ${name}  ${(cause as Error).message.split('\n')[0]}`);
+
+      return 'needs-generation';
+    }
+
+    try {
       const error = await this.agent.send(sendImage(dylib));
       const took = Date.now() - started;
 

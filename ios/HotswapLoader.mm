@@ -5,6 +5,7 @@
 #import <sys/socket.h>
 #import <unistd.h>
 
+#import "HotswapGenerations.h"
 #import "HotswapPointers.h"
 #import "HotswapRebind.h"
 
@@ -45,6 +46,10 @@ static uint8_t loadImage(NSString *path) {
 
 static void serveConnection(int client) {
   while (YES) {
+    uint8_t kind = 0;
+    if (!readExactly(client, &kind, sizeof(kind))) return;
+    if (kind > 1) return;
+
     uint32_t length = 0;
     if (!readExactly(client, &length, sizeof(length))) return;
     length = ntohl(length);
@@ -54,7 +59,8 @@ static void serveConnection(int client) {
     if (!readExactly(client, buffer.mutableBytes, length)) return;
 
     NSString *path = [[NSString alloc] initWithData:buffer encoding:NSUTF8StringEncoding];
-    uint8_t reply = loadImage(path);
+    uint8_t reply = kind == 1 ? (HotswapPublishGeneration(path.UTF8String) ? 0 : 1)
+                              : loadImage(path);
 
     if (send(client, &reply, 1, 0) != 1) return;
   }

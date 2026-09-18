@@ -211,6 +211,27 @@ generation 2    275ms    replay
 That makes a generation faster than the Swift patch path, which is around six seconds,
 because patching goes through Xcode every save and a generation replays swiftc directly.
 
+### Measured, in the running app
+
+```
+  ↻ ios/ProbeValues.swift  declares no replaceable methods
+  ♻️ ios/ProbeValues.swift  reloaded from a new generation  1840ms     swift=1 -> 31337
+  ✅ ios/ProbeValues.swift  6176ms                                     body change, patched
+```
+
+The method the generation called did not exist when the app was installed, which is the thing
+dynamic replacement cannot do. Same pid throughout.
+
+### Patching cannot follow a generation on iOS
+
+A generation is its own Swift module, so its types are not the ones a replacement names: after
+one is live, a patch lands on classes nothing is using any more and reports that it replaced
+nothing. So the iOS side stops patching once it has published, which costs little — a
+generation is the faster of the two there.
+
+ART has no such split. A redefinition reaches every loaded copy of a class, so Android keeps
+its fast path for as long as the edit allows it.
+
 What this costs:
 
 - **`RCT_EXPORT_MODULE` registers by name at load.** A module RN finds that way gets
@@ -230,6 +251,7 @@ What this costs:
 3. ~~**Drive the reload.**~~ Done, above.
 4. ~~**Fall back honestly.**~~ Done. Patching runs first; ART's refusal is what chooses the
    generation, so nothing has to guess which kind of edit it is looking at.
-5. **iOS.** A Swift module per generation, reached through a factory.
+5. ~~**iOS.**~~ Done. A Swift module per generation, reached through a generated factory,
+   published over the same socket the patch dylibs use.
 
 Patching does not go away. It becomes the fast path.

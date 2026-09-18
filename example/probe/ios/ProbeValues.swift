@@ -1,9 +1,9 @@
 import Foundation
 
 /** The Swift swap target. Change what it returns and save. */
-class ProbeValues {
+@objc public class ProbeValues: NSObject {
 
-  func value() -> Int {
+  @objc public func value() -> Int {
     return 1
   }
 }
