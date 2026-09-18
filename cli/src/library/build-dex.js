@@ -10,12 +10,12 @@ import { tmpdir } from 'node:os'
  * The siblings matter: a lambda or a coroutine body becomes its own class, and
  * redefining the outer one alone leaves the runtime pointing at stale code.
  */
-export function buildDex({ className, project, gradleTask, classesDir }) {
-  execFileSync('./gradlew', [gradleTask, '-q'], { cwd: project, stdio: 'inherit' })
+export function buildDex({ className, project, task, classes }) {
+  execFileSync('./gradlew', [task, '-q'], { cwd: project, stdio: 'pipe' })
 
   const parts = className.split('/')
   const simple = parts.pop()
-  const packageDir = join(classesDir, ...parts)
+  const packageDir = join(classes, ...parts)
 
   if (!existsSync(packageDir)) throw new Error(`no compiled classes in ${packageDir}`)
 
@@ -26,7 +26,7 @@ export function buildDex({ className, project, gradleTask, classesDir }) {
   if (targets.length === 0) throw new Error(`${simple}.class not found in ${packageDir}`)
 
   const out = mkdtempSync(join(tmpdir(), 'hotswap-'))
-  execFileSync(dexer(), ['--min-api', '28', '--output', out, ...targets], { stdio: 'inherit' })
+  execFileSync(dexer(), ['--min-api', '28', '--output', out, ...targets], { stdio: 'pipe' })
 
   return { dex: readFileSync(join(out, 'classes.dex')), classCount: targets.length }
 }
@@ -34,7 +34,6 @@ export function buildDex({ className, project, gradleTask, classesDir }) {
 function dexer() {
   const sdk = process.env.ANDROID_HOME ?? join(process.env.HOME, 'Library/Android/sdk')
   const tools = join(sdk, 'build-tools')
-  const newest = readdirSync(tools).sort().pop()
 
-  return join(tools, newest, 'd8')
+  return join(tools, readdirSync(tools).sort().pop(), 'd8')
 }
