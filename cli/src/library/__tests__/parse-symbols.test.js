@@ -9,7 +9,9 @@ describe('parseSymbols', () => {
   });
 
   it('a local function counts too, since C++ gives internal linkage a lowercase t', () => {
-    expect(parseSymbols('_ZL6helperv t 100 10')).toEqual([{ name: '_ZL6helperv', size: 16 }]);
+    expect(parseSymbols('_ZL6helperv t 100 10')).toEqual([
+      { name: '_ZL6helperv', size: 16 },
+    ]);
   });
 
   it('a weak function counts, which is what an inline definition becomes', () => {
