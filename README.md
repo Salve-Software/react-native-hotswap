@@ -1,7 +1,9 @@
+![react-native-hotswap](assets/banner-hotswap.png)
+
 # react-native-hotswap
 
-Change your Kotlin, Swift or C++, save, and the running app picks it up. No reinstall, no
-restart, no lost state.
+Fast Refresh covers your JavaScript. This covers the other half: the Kotlin, Swift and C++
+underneath it.
 
 ```
 hotswap  watching android/src/main/java  →  127.0.0.1:8099
