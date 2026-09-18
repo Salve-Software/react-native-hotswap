@@ -11,6 +11,8 @@
 #include <thread>
 #include <vector>
 
+#include "native_swap.h"
+
 #define LOG_TAG "Hotswap"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
@@ -18,6 +20,8 @@
 namespace {
 
 constexpr int kDefaultPort = 8099;
+constexpr unsigned char kClasses = 0;
+constexpr unsigned char kNative = 1;
 constexpr const char* kStructuralRedefine =
     "com.android.art.class.structurally_redefine_classes";
 
@@ -165,32 +169,68 @@ bool readBytes(int client, std::vector<unsigned char>& into) {
   return readExactly(client, into.data(), length);
 }
 
-void serveConnection(int client) {
+bool serveClasses(int client, unsigned char& reply) {
+  uint32_t count = 0;
+  if (!readExactly(client, &count, sizeof(count))) return false;
+  count = ntohl(count);
+  if (count == 0 || count > 256) return false;
+
+  std::vector<Definition> definitions(count);
+  for (uint32_t i = 0; i < count; i++) {
+    if (!readString(client, definitions[i].className)) return false;
+    if (!readBytes(client, definitions[i].dex)) return false;
+  }
+
+  const jvmtiError error = redefine(definitions);
+  if (error == JVMTI_ERROR_NONE) {
+    LOGI("redefined %u class(es), first %s", count, definitions[0].className.c_str());
+  } else {
+    LOGE("failed to redefine %s: jvmtiError %d", definitions[0].className.c_str(), error);
+  }
+
+  reply = static_cast<unsigned char>(error);
+
+  return true;
+}
+
+bool serveNative(int client, const std::string& filesDir, unsigned char& reply) {
+  std::vector<unsigned char> image;
+  if (!readBytes(client, image)) return false;
+
+  uint32_t count = 0;
+  if (!readExactly(client, &count, sizeof(count))) return false;
+  count = ntohl(count);
+  if (count == 0 || count > 8192) return false;
+
+  std::vector<NativeSymbol> symbols(count);
+  for (uint32_t i = 0; i < count; i++) {
+    if (!readString(client, symbols[i].name)) return false;
+
+    uint32_t size = 0;
+    if (!readExactly(client, &size, sizeof(size))) return false;
+    symbols[i].size = ntohl(size);
+  }
+
+  reply = hotswapLoadNative(filesDir, image, symbols);
+
+  return true;
+}
+
+void serveConnection(int client, const std::string& filesDir) {
   while (true) {
-    uint32_t count = 0;
-    if (!readExactly(client, &count, sizeof(count))) return;
-    count = ntohl(count);
-    if (count == 0 || count > 256) return;
+    unsigned char kind = 0;
+    if (!readExactly(client, &kind, sizeof(kind))) return;
+    if (kind != kClasses && kind != kNative) return;
 
-    std::vector<Definition> definitions(count);
-    for (uint32_t i = 0; i < count; i++) {
-      if (!readString(client, definitions[i].className)) return;
-      if (!readBytes(client, definitions[i].dex)) return;
-    }
-
-    const jvmtiError error = redefine(definitions);
-    if (error == JVMTI_ERROR_NONE) {
-      LOGI("redefined %u class(es), first %s", count, definitions[0].className.c_str());
-    } else {
-      LOGE("failed to redefine %s: jvmtiError %d", definitions[0].className.c_str(), error);
-    }
-
-    const unsigned char reply = static_cast<unsigned char>(error);
+    unsigned char reply = 0;
+    const bool served = kind == kNative ? serveNative(client, filesDir, reply)
+                                        : serveClasses(client, reply);
+    if (!served) return;
     if (send(client, &reply, 1, 0) != 1) return;
   }
 }
 
-void listenForever(int port) {
+void listenForever(int port, std::string filesDir) {
   const int server = socket(AF_INET, SOCK_STREAM, 0);
   if (server < 0) {
     LOGE("could not open socket: %s", std::strerror(errno));
@@ -226,11 +266,21 @@ void listenForever(int port) {
       break;
     }
 
-    serveConnection(client);
+    serveConnection(client, filesDir);
     close(client);
   }
 
   close(server);
+}
+
+std::string valueFrom(const char* options, const char* key) {
+  if (options == nullptr) return "";
+  const char* at = std::strstr(options, key);
+  if (at == nullptr) return "";
+  at += std::strlen(key);
+  const char* end = std::strchr(at, ',');
+
+  return end == nullptr ? std::string(at) : std::string(at, (size_t)(end - at));
 }
 
 int portFrom(const char* options) {
@@ -271,7 +321,7 @@ Agent_OnAttach(JavaVM* vm, char* options, void* /* reserved */) {
   LOGI("attached, structural redefinition %s",
        gStructuralRedefine != nullptr ? "available" : "unavailable");
 
-  std::thread(listenForever, portFrom(options)).detach();
+  std::thread(listenForever, portFrom(options), valueFrom(options, "files=")).detach();
 
   return JNI_OK;
 }

@@ -32,7 +32,9 @@ internal object HotswapAgent {
 
     val path = agentPath(context) ?: return
 
-    runCatching { Debug.attachJvmtiAgent(path, "port=$PORT", javaClass.classLoader) }
+    val options = "port=$PORT,files=${context.filesDir.absolutePath},lib=${context.applicationInfo.nativeLibraryDir}"
+
+    runCatching { Debug.attachJvmtiAgent(path, options, javaClass.classLoader) }
       .onSuccess { Log.i(TAG, "agent attached from $path") }
       .onFailure { Log.w(TAG, "could not attach the agent", it) }
   }
