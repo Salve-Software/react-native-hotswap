@@ -1,7 +1,7 @@
 {
   "name": "react-native-hotswap",
   "version": "0.1.0",
-  "description": "Hot-swap the native side of your React Native app. Kotlin today, C++ and Swift next. Safest with Nitro.",
+  "description": "Hot-swap the native side of a running React Native app: Kotlin and C++ on Android, Swift and C++ on the iOS simulator. Safest with Nitro.",
   "bin": {
     "hotswap": "./lib/bin.js"
   },

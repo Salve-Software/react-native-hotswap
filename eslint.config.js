@@ -9,8 +9,6 @@ export default [
 
   js.configs.recommended,
 
-  // The TypeScript rules apply to the source only. metro.cjs is required by a consumer's
-  // Metro config and has to stay CommonJS, which the recommended set forbids outright.
   ...ts.configs.recommended.map((config) => ({ ...config, files: ['src/**/*.ts'] })),
 
   {
@@ -37,8 +35,6 @@ export default [
   {
     files: ['src/**/*.ts'],
     rules: {
-      // TypeScript already resolves every name, and the shared globals list cannot know
-      // about types like NodeJS.Timeout.
       'no-undef': 'off',
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [

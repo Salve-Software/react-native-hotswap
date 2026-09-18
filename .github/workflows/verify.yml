@@ -12,9 +12,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+      - run: bun run typecheck
       - run: bun run lint
       - run: bun run format:check
       - run: bun run test
+      - run: bun run build
 
   agent:
     runs-on: ubuntu-latest
@@ -24,6 +26,5 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      # The agent is the half that cannot be unit tested, so the least this can do is prove
-      # it still compiles for every ABI.
+      # The agent cannot be unit tested, so the least this can do is prove it still builds.
       - run: ./gradlew :android:assembleDebug
