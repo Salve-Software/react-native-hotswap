@@ -25,33 +25,76 @@ function findMethods(source) {
 
   let match;
   while ((match = opener.exec(source)) !== null) {
-    const body = readBody(source, opener.lastIndex - 1);
-    if (body === undefined) continue;
+    const read = readBody(source, opener.lastIndex - 1);
+    if (read === undefined) continue;
 
     found.push({
-      indent: match[1],
       name: match[2],
       parameters: match[3],
       returns: match[4].trim(),
-      body,
+      body: read.body,
     });
+
+    // A function declared inside this body is local to it and cannot be replaced, so the
+    // scan resumes after the body rather than walking into it.
+    opener.lastIndex = read.end;
   }
 
   return found;
 }
 
+/**
+ * Returns the body between matching braces, counting only braces that are really code.
+ *
+ * A brace inside a string or a comment would otherwise close the body early and swallow
+ * whatever followed it.
+ */
 function readBody(source, openBrace) {
   let depth = 0;
+  let i = openBrace;
 
-  for (let i = openBrace; i < source.length; i++) {
+  while (i < source.length) {
+    const skipped = skipNonCode(source, i);
+
+    if (skipped > i) {
+      i = skipped;
+      continue;
+    }
+
     if (source[i] === '{') depth++;
     else if (source[i] === '}') {
       depth--;
-      if (depth === 0) return source.slice(openBrace + 1, i);
+      if (depth === 0) return { body: source.slice(openBrace + 1, i), end: i };
     }
+
+    i++;
   }
 
   return undefined;
+}
+
+/** How far to jump to get past a string or a comment starting here, or here if neither. */
+function skipNonCode(source, at) {
+  if (source.startsWith('//', at)) {
+    const line = source.indexOf('\n', at);
+
+    return line === -1 ? source.length : line;
+  }
+
+  if (source.startsWith('/*', at)) {
+    const close = source.indexOf('*/', at + 2);
+
+    return close === -1 ? source.length : close + 2;
+  }
+
+  if (source[at] !== '"') return at;
+
+  for (let i = at + 1; i < source.length; i++) {
+    if (source[i] === '\\') i++;
+    else if (source[i] === '"') return i + 1;
+  }
+
+  return source.length;
 }
 
 /** The attribute names the original by its argument labels, which is what Swift matches on. */
