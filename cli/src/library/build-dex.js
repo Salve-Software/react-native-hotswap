@@ -3,13 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
-/**
- * Compiles the module through gradle, then dexes the target class and every
- * synthetic sibling Kotlin emitted for it.
- *
- * The siblings matter: a lambda or a coroutine body becomes its own class, and
- * redefining the outer one alone leaves the runtime pointing at stale code.
- */
+/** Compiles the target class and its synthetic siblings into one dex. */
 export function buildDex({ className, project, task, classes }) {
   execFileSync('./gradlew', [task, '-q'], { cwd: project, stdio: 'pipe' })
 

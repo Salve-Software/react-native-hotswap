@@ -1,11 +1,6 @@
 import { connect } from 'node:net'
 
-/**
- * Sends one class redefinition to the agent and resolves with its jvmtiError.
- *
- * Wire format, all big endian: [u32 nameLength][name][u32 dexLength][dex].
- * The reply is a single byte, 0 meaning the class was redefined.
- */
+/** Sends one class redefinition to the agent and resolves with its jvmtiError. */
 export function sendRedefinition({ className, dex }, port) {
   return new Promise((resolve, reject) => {
     const socket = connect({ host: '127.0.0.1', port })

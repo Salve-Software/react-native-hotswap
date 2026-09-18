@@ -3,13 +3,7 @@ const { join, resolve } = require('node:path')
 
 let started = false
 
-/**
- * Starts the Kotlin watcher alongside Metro, so `react-native start` is the only
- * process a developer runs.
- *
- * Metro loads its config more than once in some flows, hence the guard: two
- * watchers would each fire gradle on every save.
- */
+/** Starts the Kotlin watcher alongside Metro, so `react-native start` is the only process. */
 function withHotswap(config, options = {}) {
   if (started || process.env.HOTSWAP === '0') return config
   started = true

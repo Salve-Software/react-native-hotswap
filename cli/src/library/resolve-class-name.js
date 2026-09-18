@@ -1,12 +1,7 @@
 import { basename } from 'node:path'
 import { readFileSync } from 'node:fs'
 
-/**
- * Derives the JNI class name a Kotlin file compiles into.
- *
- * A file declaring `class Foo` in Foo.kt becomes Foo; a file of top-level
- * functions becomes FooKt, which is the case that catches people out.
- */
+/** Derives the JNI class name a Kotlin file compiles into. */
 export function resolveClassName(file) {
   const source = readFileSync(file, 'utf8')
   const name = basename(file, '.kt')

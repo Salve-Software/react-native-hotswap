@@ -42,17 +42,10 @@ internal object HotswapAgent {
       .onFailure { Log.w(TAG, "could not attach the agent", it) }
   }
 
-  /**
-   * Debug.attachJvmtiAgent rejects any path containing '=', and every modern install
-   * directory is base64-named and ends in '=='. A symlink from the app's own files
-   * directory gives the same file an acceptable name; the linker still resolves to the
-   * original, so it keeps the executable SELinux label that W^X requires.
-   */
+  /** Debug.attachJvmtiAgent rejects paths containing '=', which every install path has. */
   private fun File.linkWithoutEquals(context: Context): String? {
     val link = File(context.filesDir, LINK)
 
-    // exists() follows the link, so a stale one left by the previous install reads as
-    // absent and then makes symlink fail with EEXIST. Remove it unconditionally.
     runCatching { Os.remove(link.absolutePath) }
 
     return runCatching {

@@ -1,6 +1,8 @@
 node_modules
 lib
 build
+.cxx
 .gradle
+.kotlin
 local.properties
 *.log

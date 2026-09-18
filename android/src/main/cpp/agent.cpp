@@ -27,9 +27,6 @@ jvmtiEnv* gJvmti = nullptr;
 using StructuralRedefineFn = jvmtiError (*)(jvmtiEnv*, jint, const jvmtiClassDefinition*);
 StructuralRedefineFn gStructuralRedefine = nullptr;
 
-// ART exposes structural redefinition as a JVMTI extension rather than a normal
-// entrypoint, so it has to be looked up by name at attach time. Its absence is
-// what tells us the device is below Android 11.
 void resolveStructuralRedefine() {
   jint count = 0;
   jvmtiExtensionFunctionInfo* extensions = nullptr;
@@ -46,8 +43,6 @@ void resolveStructuralRedefine() {
   gJvmti->Deallocate(reinterpret_cast<unsigned char*>(extensions));
 }
 
-// FindClass on the agent's own thread resolves against the system classloader, which
-// cannot see app classes. Walking the loaded classes finds it in whatever loader owns it.
 jclass findLoadedClass(JNIEnv* env, const std::string& className) {
   const std::string wanted = "L" + className + ";";
 
@@ -92,9 +87,6 @@ jvmtiError redefine(const std::string& className, const std::vector<unsigned cha
   definition.class_byte_count = static_cast<jint>(dex.size());
   definition.class_bytes = dex.data();
 
-  // Structural redefinition accepts added methods and fields; the classic call
-  // only swaps existing method bodies. Prefer the former, fall back to the
-  // latter so Android 10 still gets something.
   const jvmtiError result = gStructuralRedefine != nullptr
                                 ? gStructuralRedefine(gJvmti, 1, &definition)
                                 : gJvmti->RedefineClasses(1, &definition);
@@ -116,8 +108,6 @@ bool readExactly(int fd, void* into, size_t size) {
   return true;
 }
 
-// Wire format, all big endian: [u32 nameLength][name][u32 dexLength][dex].
-// The reply is a single byte: 0 for success, otherwise the jvmtiError.
 void serveConnection(int client) {
   while (true) {
     uint32_t nameLength = 0;
@@ -199,8 +189,6 @@ Agent_OnAttach(JavaVM* vm, char* options, void* /* reserved */) {
     return JNI_ERR;
   }
 
-  // can_redefine_any_class covers system classes and ART does not always grant it, so
-  // ask for only what it says it has rather than failing the whole attach.
   jvmtiCapabilities available{};
   gJvmti->GetPotentialCapabilities(&available);
   LOGI("ART offers redefine_classes=%d redefine_any_class=%d",
