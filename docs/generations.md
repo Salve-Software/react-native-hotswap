@@ -43,6 +43,20 @@ new instance a set of classes that did not exist a moment earlier.
 
 That is the whole mechanism on Android, and it is RN's own contract rather than a hole in it.
 
+## Measured, on the example
+
+A generation dex loaded into the running app, with no reinstall and the same pid:
+
+```
+GENERATION answer=1         fromApk=false   generation one
+GENERATION answer=20260918  fromApk=false   generation two, calling a class the apk never had
+```
+
+The second generation's `Generation.answer()` calls a `Helper` compiled after the app was
+installed. Under patching that same edit reports success and then throws
+`NoClassDefFoundError`. `fromApk=false` is the part that matters: the class came from the
+generation, so the apk copy never won.
+
 ## Class identity, which is the part that bites
 
 A child loader delegates to its parent first, and the module's classes are in the apk, so the
@@ -68,8 +82,7 @@ change shape, generations change shape and cannot keep objects.
 
 ## Order of work
 
-1. **Prove the loader.** One module, child-first generation loader, two generations with a
-   class that exists only in the second.
+1. ~~**Prove the loader.**~~ Done, above.
 2. **Compile a generation.** Reuse what already compiles a module, emit a dex per generation.
 3. **Drive the reload.** Publish, then ask `ReactHost` to reload, then report what changed.
 4. **Fall back honestly.** A change that patching handles should still be patched: it is
