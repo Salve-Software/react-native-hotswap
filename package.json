@@ -1,6 +1,6 @@
 {
   "name": "@salve-software/react-native-hotswap",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Hot-swap the native side of a running React Native app: Kotlin and C++ on Android, Swift and C++ on the iOS simulator. Safest with Nitro.",
   "bin": {
     "hotswap": "./lib/bin.js"

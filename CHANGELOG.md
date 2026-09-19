@@ -1,3 +1,57 @@
+## [0.2.0](https://github.com/Salve-Software/react-native-hotswap/compare/v0.1.0...v0.2.0) (2026-09-19)
+
+### ✨ Features
+
+* **check:** ask the agent which app it is ([01cdc6f](https://github.com/Salve-Software/react-native-hotswap/commit/01cdc6f8baca3fdd3a5a196b5e4550e0c856f09f))
+* **ios:** let a patch carry a file the running app never had ([8188347](https://github.com/Salve-Software/react-native-hotswap/commit/8188347b88408d1452c66f52cb6d5e4314040d0e))
+* **ios:** swap a new Swift file through whatever calls it ([0691d8b](https://github.com/Salve-Software/react-native-hotswap/commit/0691d8bc6c7183f28a145aec8fa4b434e5526585))
+
+### 🐛 Bug Fixes
+
+* **cli:** print the compiler's error, not its command line ([c72b3f6](https://github.com/Salve-Software/react-native-hotswap/commit/c72b3f6f137fc9b09148f8653466b7b7645c9dcf))
+* **example:** apply the React Native plugin to the probe module ([7cc68b6](https://github.com/Salve-Software/react-native-hotswap/commit/7cc68b66640da0ad7193c036d10422d8d6e6e865))
+* **example:** hold @babel/runtime at 7, which Metro can resolve ([#14](https://github.com/Salve-Software/react-native-hotswap/issues/14)) ([c78d0b2](https://github.com/Salve-Software/react-native-hotswap/commit/c78d0b29f68c4247404d853f0e63afa88f08b7f7))
+* **generation:** read native bindings from the compiled classes ([4f76f4f](https://github.com/Salve-Software/react-native-hotswap/commit/4f76f4f983d5a2648a3bd293fe9d13f2a6500fd8))
+* **generation:** recognise the ReactPackage base classes ([1a138f2](https://github.com/Salve-Software/react-native-hotswap/commit/1a138f282bedfdbe810ebc5de73aeaf666e8803d))
+* **generation:** refuse a generation that would reach nothing ([2d7871f](https://github.com/Salve-Software/react-native-hotswap/commit/2d7871f49c38c31335bddf3e8e4a42ea05164291))
+* **ios:** capture the swiftc the simulator's architecture was built with ([#16](https://github.com/Salve-Software/react-native-hotswap/issues/16)) ([4ac58fa](https://github.com/Salve-Software/react-native-hotswap/commit/4ac58fabbb441f2a9658f9bf6e015c8246ce2a91))
+
+### 💨 Performance Improvements
+
+* **ios:** replay the captured clang for a C++ swap ([ea79518](https://github.com/Salve-Software/react-native-hotswap/commit/ea795189bd99020782e3a0b798973c2900dfa8a7))
+* **ios:** replay the captured compile instead of running xcodebuild ([53211ae](https://github.com/Salve-Software/react-native-hotswap/commit/53211aeafd461c323ee6247cc3b6521a0ca3c689))
+* warm both compilers when the watcher starts ([0ea53ba](https://github.com/Salve-Software/react-native-hotswap/commit/0ea53ba94275d88558059e1d0fb8c91d39e056d2))
+
+### 🧹 Cleanup
+
+* cut every comment back to one line ([f871d63](https://github.com/Salve-Software/react-native-hotswap/commit/f871d630239fc3dfd16e97bccb4b9dcc0c9c3355))
+* remove every comment from the code ([d3443f5](https://github.com/Salve-Software/react-native-hotswap/commit/d3443f5cfbea5fb8ced1f8831e94ec1784f426c7))
+
+### 📦 Build
+
+* **deps-dev:** bump @types/node from 22.20.3 to 26.6.1 ([#12](https://github.com/Salve-Software/react-native-hotswap/issues/12)) ([49517d1](https://github.com/Salve-Software/react-native-hotswap/commit/49517d13e435e017cbd734a6dbe395ae1eedf7bf))
+* **deps-dev:** bump react-native from 0.76.5 to 0.87.1 ([#11](https://github.com/Salve-Software/react-native-hotswap/issues/11)) ([1bf5a6a](https://github.com/Salve-Software/react-native-hotswap/commit/1bf5a6acccb006b6b866e58edb1122d42c07bacb))
+* **deps-dev:** bump the babel group across 1 directory with 3 updates ([#9](https://github.com/Salve-Software/react-native-hotswap/issues/9)) ([4d2712e](https://github.com/Salve-Software/react-native-hotswap/commit/4d2712e910dcf957f603bb2e87d1efdfd02de6ec))
+* **deps-dev:** bump the react-native-cli group across 1 directory with 3 updates ([#8](https://github.com/Salve-Software/react-native-hotswap/issues/8)) ([78a0875](https://github.com/Salve-Software/react-native-hotswap/commit/78a0875139f618201f0bd9f9d037280c866e4070))
+* **deps:** bump actions/cache from 4 to 6 ([#2](https://github.com/Salve-Software/react-native-hotswap/issues/2)) ([939b7b4](https://github.com/Salve-Software/react-native-hotswap/commit/939b7b436167f5cdb3c0bdd489af3e23ab8ca664))
+* **deps:** bump actions/checkout from 4 to 7 ([#5](https://github.com/Salve-Software/react-native-hotswap/issues/5)) ([62ac138](https://github.com/Salve-Software/react-native-hotswap/commit/62ac138c5a96df881f8b52ee53c11a16d67b6fd0))
+* **deps:** bump actions/setup-java from 5 to 6 ([#7](https://github.com/Salve-Software/react-native-hotswap/issues/7)) ([79c6b1f](https://github.com/Salve-Software/react-native-hotswap/commit/79c6b1fe7a81f87f18648cf3305f951b77d3acfb))
+* **deps:** bump actions/setup-node from 4 to 7 ([#6](https://github.com/Salve-Software/react-native-hotswap/issues/6)) ([3309213](https://github.com/Salve-Software/react-native-hotswap/commit/33092135cd83b1ea0dd3c222db54173b5897a040))
+* **deps:** bump concurrent-ruby from 1.3.3 to 1.3.8 in /example ([#4](https://github.com/Salve-Software/react-native-hotswap/issues/4)) ([e69b949](https://github.com/Salve-Software/react-native-hotswap/commit/e69b9492e1c5ee3ec7e60788ff807566f474cf8c))
+* **deps:** bump xcodeproj from 1.25.1 to 1.28.1 in /example ([#1](https://github.com/Salve-Software/react-native-hotswap/issues/1)) ([1b9c6dc](https://github.com/Salve-Software/react-native-hotswap/commit/1b9c6dc404699a65a4ea5daed43b6ce44544c527))
+
+### 📚 Documentation
+
+* record the new timings and where they came from ([dc38c55](https://github.com/Salve-Software/react-native-hotswap/commit/dc38c556d6bdc94d48efa5cb636a632ca0c19661))
+
+### 🧪 Tests
+
+* **e2e:** prove a swap reaches a running app, on both platforms ([#15](https://github.com/Salve-Software/react-native-hotswap/issues/15)) ([86ea8ad](https://github.com/Salve-Software/react-native-hotswap/commit/86ea8ad70b6c3032d61ba7c0b1d10e23191a71ed))
+
+### ⚙️ Continuous Integration
+
+* build iOS against any simulator, not a named one ([e59e421](https://github.com/Salve-Software/react-native-hotswap/commit/e59e421615c516e23b90d8f57a41e58c9eda65d2))
+
 ## [0.1.0](https://github.com/Salve-Software/react-native-hotswap/compare/v0.0.0...v0.1.0) (2026-09-18)
 
 ### ✨ Features
