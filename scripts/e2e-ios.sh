@@ -21,6 +21,9 @@ cleanup() {
   if [ "$FAILED" -ne 0 ] || [ -n "${DYING:-}" ]; then
     printf '\n== what metro was doing\n'
     tail -40 "$METRO_LOG" 2>/dev/null | sed 's/^/   /' || true
+
+    printf '\n== what the app was saying\n'
+    grep -iE 'hotswap|dlopen|dyld|image' "$PROBE_LOG" 2>/dev/null | tail -30 | sed 's/^/   /' || true
   fi
 
   [ -n "${METRO_PID:-}" ] && kill "$METRO_PID" 2>/dev/null || true
