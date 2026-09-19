@@ -20,11 +20,24 @@ struct Replacement {
   uint32_t room;
 };
 
+#if defined(__aarch64__)
+
 constexpr size_t kNearJump = 4;
+constexpr intptr_t kBranchReach = 1 << 27;
+
+#elif defined(__x86_64__)
+
+constexpr size_t kNearJump = 5;
+constexpr intptr_t kBranchReach = (static_cast<intptr_t>(1) << 31) - 64;
+
+#else
+
+constexpr size_t kNearJump = 4;
+constexpr intptr_t kBranchReach = 0;
+
+#endif
 
 constexpr size_t kFarJump = 16;
-
-constexpr intptr_t kBranchReach = 1 << 27;
 
 unsigned int gLoaded = 0;
 
@@ -113,9 +126,22 @@ bool writeFarJump(void* into, const void* to) {
 
   if (mprotect(start, page, PROT_READ | PROT_WRITE) != 0) return false;
 
+#if defined(__aarch64__)
   const uint32_t code[2] = {0x58000050, 0xD61F0200};
+
   std::memcpy(into, code, sizeof(code));
   std::memcpy(static_cast<char*>(into) + sizeof(code), &to, sizeof(to));
+#elif defined(__x86_64__)
+  const unsigned char code[6] = {0xFF, 0x25, 0x00, 0x00, 0x00, 0x00};
+
+  std::memcpy(into, code, sizeof(code));
+  std::memcpy(static_cast<char*>(into) + sizeof(code), &to, sizeof(to));
+#else
+  static_cast<void>(to);
+  mprotect(start, page, PROT_READ | PROT_EXEC);
+
+  return false;
+#endif
 
   if (mprotect(start, page, PROT_READ | PROT_EXEC) != 0) return false;
 
@@ -134,6 +160,11 @@ bool makeWritable(void* from, size_t width) {
 }
 
 bool writeJump(void* from, const Replacement& to) {
+#if !defined(__aarch64__) && !defined(__x86_64__)
+  LOGE("%s cannot be redirected: no jump is written for this architecture", to.name);
+
+  return false;
+#else
   const void* landing = to.address;
 
   if (!reachable(from, landing)) {
@@ -154,14 +185,24 @@ bool writeJump(void* from, const Replacement& to) {
     return false;
   }
 
+#if defined(__aarch64__)
   const intptr_t delta =
       reinterpret_cast<intptr_t>(landing) - reinterpret_cast<intptr_t>(from);
   const uint32_t branch = 0x14000000u | (static_cast<uint32_t>(delta >> 2) & 0x03FFFFFFu);
   std::memcpy(from, &branch, sizeof(branch));
+#else
+  const intptr_t delta = reinterpret_cast<intptr_t>(landing) -
+                         (reinterpret_cast<intptr_t>(from) + static_cast<intptr_t>(kNearJump));
+  unsigned char branch[kNearJump] = {0xE9};
+  const int32_t relative = static_cast<int32_t>(delta);
+  std::memcpy(branch + 1, &relative, sizeof(relative));
+  std::memcpy(from, branch, sizeof(branch));
+#endif
 
   __builtin___clear_cache(static_cast<char*>(from), static_cast<char*>(from) + kNearJump);
 
   return true;
+#endif
 }
 
 bool write(const std::string& path, const std::vector<unsigned char>& image) {
