@@ -1,6 +1,6 @@
 import type { Outcome, SwapConfig, Swapper } from '../../../types/index.js';
 import { dirname, join, relative } from 'node:path';
-import { forwardPort } from '../../../library/index.js';
+import { forwardPort, reason } from '../../../library/index.js';
 import { Agent } from '../../agent/index.js';
 import {
   buildSharedObject,
@@ -60,7 +60,7 @@ export class NativeSwapper implements Swapper {
 
       return status === 0 ? 'swapped' : 'failed';
     } catch (cause) {
-      console.log(`  ❌ ${name}  ${(cause as Error).message.split('\n')[0]}`);
+      console.log(`  ❌ ${name}  ${reason(cause)}`);
 
       return 'failed';
     }

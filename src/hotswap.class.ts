@@ -18,6 +18,7 @@ import {
   findSources,
   forwardPort,
   platformsFor,
+  reason,
   readSwiftCommand,
   warmGradle,
 } from './library/index.js';
@@ -86,9 +87,7 @@ export class Hotswap {
 
     for (const result of settled) {
       if (result.status === 'rejected') {
-        console.log(
-          `  ⚠️  did not warm up: ${(result.reason as Error).message.split('\n')[0]}`,
-        );
+        console.log(`  ⚠️  did not warm up: ${reason(result.reason)}`);
       }
     }
   }

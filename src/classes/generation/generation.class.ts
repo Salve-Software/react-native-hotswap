@@ -1,6 +1,6 @@
 import type { Platform, SwapConfig } from '../../types/index.js';
 import { relative } from 'node:path';
-import { forwardPort } from '../../library/index.js';
+import { forwardPort, reason } from '../../library/index.js';
 import { Agent } from '../agent/index.js';
 import {
   buildGeneration,
@@ -36,7 +36,7 @@ export class Generation {
 
       return status === 0;
     } catch (cause) {
-      console.log(`  ❌ ${name}  ${(cause as Error).message.split('\n')[0]}`);
+      console.log(`  ❌ ${name}  ${reason(cause)}`);
 
       return false;
     }
