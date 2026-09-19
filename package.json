@@ -70,7 +70,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import-x": "^4.17.1",
     "prettier": "^3.9.8",
-    "react-native": "0.76.5",
+    "react-native": "0.87.1",
     "semantic-release": "^25.0.9",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.70.0",
