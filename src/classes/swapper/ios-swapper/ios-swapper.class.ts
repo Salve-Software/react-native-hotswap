@@ -1,11 +1,13 @@
 import type { Outcome, SwapConfig, Swapper } from '../../../types/index.js';
 import { relative } from 'node:path';
+import { PATCHES } from '../../../constants/index.js';
 import { findSources, readBuildCommands, reason } from '../../../library/index.js';
 import { Agent } from '../../agent/index.js';
 import {
   buildDylib,
   builtSources,
   filesTheAppLacks,
+  findSwiftCallers,
   sendImage,
 } from './library/index.js';
 
@@ -20,11 +22,7 @@ export class IosSwapper implements Swapper {
     const started = Date.now();
     const name = relative(this.config.root, path);
 
-    if (this.isNewHere(path)) {
-      console.log(`  ↷ ${name}  new here; it swaps once something loaded calls it`);
-
-      return 'nothing-to-swap';
-    }
+    if (this.isNewHere(path)) return this.swapCallers(path);
 
     let dylib: string;
     try {
@@ -59,6 +57,35 @@ export class IosSwapper implements Swapper {
 
       return 'failed';
     }
+  }
+
+  private async swapCallers(path: string): Promise<Outcome> {
+    const name = relative(this.config.root, path);
+    const callers = findSwiftCallers(path, this.loadedSources());
+
+    if (callers.length === 0) {
+      console.log(`  ↷ ${name}  new here; it swaps once something loaded calls it`);
+
+      return 'nothing-to-swap';
+    }
+
+    console.log(`  ↳ ${name}  called by ${callers.length}`);
+
+    let swapped = false;
+    for (const caller of callers) {
+      if ((await this.swap(caller)) === 'swapped') swapped = true;
+    }
+
+    return swapped ? 'swapped' : 'failed';
+  }
+
+  private loadedSources(): string[] {
+    const lacking = new Set(this.lacking());
+
+    return findSources(this.config.watch, ['.swift']).filter(
+      (source) =>
+        !lacking.has(source) && !PATCHES.some(({ file }) => source.endsWith(file)),
+    );
   }
 
   private isNewHere(path: string): boolean {
