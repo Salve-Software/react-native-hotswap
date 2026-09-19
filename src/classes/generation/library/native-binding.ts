@@ -77,7 +77,6 @@ function binaryName(pool: (Entry | undefined)[], at: number): string | undefined
   return pool[entry.first]?.text?.replace(/\//g, '.');
 }
 
-/** A `native` method needs its library loaded, and only the first loader may load it. */
 function declaresNative(classFile: Buffer, after: number): boolean {
   let at = after + 6;
   at += 2 + classFile.readUInt16BE(at) * 2;
@@ -94,7 +93,6 @@ function declaresNative(classFile: Buffer, after: number): boolean {
   return false;
 }
 
-/** A class can bind a library with no native method of its own, just by loading it. */
 function callsSystemLoader(pool: (Entry | undefined)[]): boolean {
   for (const entry of pool) {
     if (

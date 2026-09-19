@@ -13,8 +13,7 @@ void *gGeneration = nullptr;
 }  // namespace
 
 bool HotswapPublishGeneration(const char *path) {
-  // The old generation stays mapped: dlclose is not dependable once Swift metadata is in an
-  // image, and its types are distinct anyway, so nothing of the new one resolves to it.
+  // dlclose is not dependable once Swift metadata is in an image, so the old one stays.
   void *image = dlopen(path, RTLD_NOW | RTLD_LOCAL);
 
   if (image == nullptr) {

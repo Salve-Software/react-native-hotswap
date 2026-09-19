@@ -26,7 +26,6 @@ public object HotswapReactHost {
 
   internal var application: Application? = null
 
-  /** The host to reload, whether this library created it or Expo did. */
   internal val running: ReactHost?
     get() = current ?: (application as? ReactApplication)?.reactHost
 

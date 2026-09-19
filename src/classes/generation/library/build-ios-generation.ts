@@ -47,8 +47,7 @@ function readSwiftCommand({
   const cache = join(tmpdir(), `hotswap-swift-${scheme}.json`);
   if (existsSync(cache)) return JSON.parse(readFileSync(cache, 'utf8')) as string[];
 
-  // A build that recompiles nothing prints no invocation, so the patch file is touched to
-  // make sure the module is one of the things this build has to do.
+  // A build that recompiles nothing prints no invocation, so the patch file is touched.
   const patch = join(patchDir, SWIFT_PATCH.file);
   writeFileSync(patch, SWIFT_PATCH.placeholder);
 

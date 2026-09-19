@@ -1,5 +1,4 @@
-// BaseReactPackage and TurboReactPackage are how React Native asks for one now, so the name
-// is matched by its ending rather than whole.
+// BaseReactPackage and TurboReactPackage end with it, so the name matches by its ending.
 const DECLARES =
   /^\s*(?:\w+\s+)*class\s+(\w+)[^{]*?(?::|implements)[^{]*\b\w*ReactPackage\b/m;
 

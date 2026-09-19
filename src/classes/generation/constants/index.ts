@@ -7,8 +7,7 @@ export const DROPPED_WITH_VALUE = [
   '-working-directory',
 ];
 
-// -import-underlying-module looks for an Objective-C module named after -module-name, and a
-// generation's name is new every time.
+// -import-underlying-module wants an ObjC module named after -module-name, new every time.
 export const DROPPED_FLAGS = [
   '-c',
   '-emit-module',

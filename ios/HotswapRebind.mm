@@ -81,9 +81,7 @@ bool HotswapHasReplacements(const char *path) {
           return true;
         }
 
-        // An extension of an @objc class compiles to a category, and the runtime attaches it
-        // on load. That is the replacement for most React Native modules, and looking only
-        // for the Swift section reported those as having changed nothing.
+        // An extension of an @objc class compiles to a category, not to __swift5_replace.
         if (strncmp(section->sectname, "__objc_catlist", sizeof(section->sectname)) == 0) {
           return true;
         }

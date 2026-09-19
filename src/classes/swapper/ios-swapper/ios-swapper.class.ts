@@ -18,8 +18,7 @@ export class IosSwapper implements Swapper {
     try {
       dylib = buildDylib(path, this.config);
     } catch (cause) {
-      // A replacement only compiles against methods the running app already has, so a patch
-      // that will not build is how a new method or a new file announces itself here.
+      // A patch only compiles against methods the running app has, so a build failure is the signal.
       console.log(`  ↻ ${name}  ${(cause as Error).message.split('\n')[0]}`);
 
       return 'needs-generation';
@@ -35,9 +34,7 @@ export class IosSwapper implements Swapper {
         return 'swapped';
       }
 
-      // A patch is compiled against the source as it is now, so a method added since the app
-      // was installed compiles here and then has nothing to attach to there — it either
-      // refuses to load or replaces nothing. Either way the app is the one that knows.
+      // A method added since install compiles here and has nothing to attach to there.
       console.log(`  ↻ ${name}  the running app has nothing to replace`);
 
       return 'needs-generation';
