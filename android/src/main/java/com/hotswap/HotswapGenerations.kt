@@ -3,10 +3,13 @@ package com.hotswap
 import android.util.Log
 import com.facebook.react.ReactPackage
 import java.nio.ByteBuffer
+import java.util.concurrent.TimeUnit
 
 internal object HotswapGenerations {
 
   private const val TAG = "Hotswap"
+
+  private const val RELOAD_SECONDS = 60L
 
   @Volatile private var current: HotswapGeneration? = null
 
@@ -24,7 +27,18 @@ internal object HotswapGenerations {
 
       val host =
         HotswapReactHost.running ?: error("no React host to reload; is this a ReactApplication?")
-      host.reload("hotswap published a generation")
+
+      // `reload` hands back a task and returns. Answering before it finishes says a
+      // generation is running when the instance is still the old one, and whoever asked
+      // goes looking for new code that is not there yet. This is a socket thread, not the
+      // main one, so waiting here leaves the reload the thread it needs.
+      val reloaded = host.reload("hotswap published a generation")
+
+      if (!reloaded.waitForCompletion(RELOAD_SECONDS, TimeUnit.SECONDS)) {
+        error("the React host did not finish reloading in ${RELOAD_SECONDS}s")
+      }
+
+      reloaded.getError()?.let { throw it }
     }
       .onFailure { Log.e(TAG, "could not publish the generation", it) }
       .isSuccess
