@@ -78,9 +78,17 @@ The other three loops, for reference, all measured on `example/`:
 | Path           | Time    | The slow part                  |
 | -------------- | ------- | ------------------------------ |
 | C++ on Android | ~0.4s   | compiling one translation unit |
-| C++ on iOS     | ~4s     | Xcode                          |
-| Swift on iOS   | ~6s     | Xcode                          |
+| C++ on iOS     | ~4s     | Xcode, which this still uses   |
+| Swift on iOS   | ~1.2s   | linking and loading            |
 | A generation   | ~0.5–2s | gradle, or a replayed `swiftc` |
+
+Swift used to be ~3s of xcodebuild per save. Almost all of it was React Native's module maps
+being reparsed, so the patch replays the captured `swiftc` against a module cache that
+survives between saves: 2.9s of xcodebuild became 0.15s of compile. xcodebuild is still the
+answer when the capture no longer fits, and the capture is thrown away when the replay fails.
+
+The watcher warms both compilers when it starts, so the first save of a session costs what the
+others do rather than 16s.
 
 An iOS generation being faster than an iOS patch is not a mistake: patching pays for Xcode on
 every save, and a generation replays the captured invocation directly.
