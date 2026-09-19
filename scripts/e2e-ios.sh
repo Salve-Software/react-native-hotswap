@@ -8,7 +8,6 @@ BUNDLE=org.reactjs.native.example.HotswapExample
 WORKSPACE="$EXAMPLE/ios/HotswapExample.xcworkspace"
 SCHEME=HotswapExample
 IOS_PORT=8100
-DERIVED=${DERIVED:-$EXAMPLE/ios/build}
 VALUES="$EXAMPLE/probe/ios/ProbeValues.swift"
 NATIVE="$EXAMPLE/probe/cpp/probe.cpp"
 BORN="$EXAMPLE/probe/ios/BornAtRuntime.swift"
@@ -75,15 +74,21 @@ for _, devices in json.load(sys.stdin)['devices'].items():
 ")}
 [ -n "$UDID" ] || { fail "no booted simulator"; exit 1; }
 
+# No -derivedDataPath. The library finds the running app's objects by asking
+# xcodebuild where OBJROOT is, and that answer is always Xcode's own location, so
+# building anywhere else leaves it compiling a patch against a build that is not
+# the one running.
 say "building the example"
 xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Debug \
   -sdk iphonesimulator -destination "platform=iOS Simulator,id=$UDID" \
-  -derivedDataPath "$DERIVED" build >/tmp/e2e-ios-build.log 2>&1 \
-  || { fail "the build failed, see /tmp/e2e-ios-build.log"; tail -20 /tmp/e2e-ios-build.log; exit 1; }
+  build >/tmp/e2e-ios-build.log 2>&1 \
+  || { fail "the build failed, see /tmp/e2e-ios-build.log"; tail -30 /tmp/e2e-ios-build.log; exit 1; }
 
-APP="$DERIVED/Build/Products/Debug-iphonesimulator/$SCHEME.app"
-[ -d "$APP" ] || { fail "no app at $APP"; exit 1; }
-pass "built $SCHEME.app"
+APP=$(xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Debug \
+  -sdk iphonesimulator -showBuildSettings 2>/dev/null \
+  | awk -F' = ' '/ BUILT_PRODUCTS_DIR = /{d=$2} / FULL_PRODUCT_NAME = /{n=$2} END{print d"/"n}')
+[ -d "$APP" ] || { fail "no app at ${APP:-nowhere}"; exit 1; }
+pass "built $(basename "$APP")"
 
 say "starting metro with the watcher"
 (cd "$EXAMPLE" && node node_modules/.bin/react-native start >"$METRO_LOG" 2>&1) &
