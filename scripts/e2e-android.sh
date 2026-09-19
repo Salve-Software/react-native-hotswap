@@ -68,8 +68,8 @@ say "installing the example"
 say "starting metro with the watcher"
 (cd "$EXAMPLE" && node node_modules/.bin/react-native start >"$METRO_LOG" 2>&1) &
 METRO_PID=$!
-await "metro" 420 "grep -q 'hotswap  watching' '$METRO_LOG'" || { DYING=1; exit 1; }
-await "the dev server" 420 "grep -q 'Dev server ready' '$METRO_LOG'" || { DYING=1; exit 1; }
+await "metro" 240 "grep -q 'hotswap  watching' '$METRO_LOG'" || { DYING=1; exit 1; }
+await "the dev server" 240 "grep -q 'Dev server ready' '$METRO_LOG'" || { DYING=1; exit 1; }
 pass "watcher is up"
 
 adb reverse tcp:8081 tcp:8081 >/dev/null
