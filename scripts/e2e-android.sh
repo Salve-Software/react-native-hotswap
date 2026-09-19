@@ -50,15 +50,17 @@ edit() {
   rm -f "$tmp"
 }
 
-probe() { adb logcat -d -s Probe 2>/dev/null | grep "kotlin=" | tail -1; }
-pid_of() { adb shell pidof "$PACKAGE" 2>/dev/null | tr -d '\r'; }
-# `grep -c` prints its count and still exits non-zero on no match, so a `|| echo 0`
-# here appends a second line and every later comparison is against "0\n0".
-swaps() {
-  local n
-  n=$(grep -cE '✅|♻️' "$METRO_LOG" 2>/dev/null) || n=0
+# Counting any swap lets a duplicate event from the previous step satisfy the wait
+# before this file has swapped at all, so the assertion that follows fails for the
+# wrong reason. The watcher does emit duplicates.
+swaps_of() {
+  local file=$1 n
+  n=$(grep -E '✅|♻️' "$METRO_LOG" 2>/dev/null | grep -c "$file") || n=0
   printf '%s' "$n"
 }
+
+probe() { adb logcat -d -s Probe 2>/dev/null | grep "kotlin=" | tail -1; }
+pid_of() { adb shell pidof "$PACKAGE" 2>/dev/null | tr -d '\r'; }
 
 say "installing the example"
 (cd "$EXAMPLE/android" && ./gradlew :app:installDebug --no-daemon -q)
@@ -85,17 +87,17 @@ BEFORE_PID=$(pid_of)
 pass "app is $PACKAGE, pid $BEFORE_PID"
 
 say "patching kotlin"
-COUNT=$(swaps)
+COUNT=$(swaps_of ProbeValues.kt)
 edit "$VALUES" 'fun value(): Int = .*' 'fun value(): Int = 424242'
 # The warm build is still compiling when this lands, so the first save waits it out.
-await "a swap" 600 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || { DYING=1; exit 1; }
+await "a swap of ProbeValues.kt" 600 "[ \$(swaps_of ProbeValues.kt) -gt $COUNT ]" || { DYING=1; exit 1; }
 await "kotlin=424242 on the device" 60 "probe | grep -q kotlin=424242" \
   && pass "kotlin=424242 reached the app" || fail "the value never changed: $(probe)"
 
 say "patching c++"
-COUNT=$(swaps)
+COUNT=$(swaps_of probe.cpp)
 edit "$NATIVE" 'int Probe::shape() { return [0-9]*; }' 'int Probe::shape() { return 31337; }'
-await "a swap" 300 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || { DYING=1; exit 1; }
+await "a swap of probe.cpp" 300 "[ \$(swaps_of probe.cpp) -gt $COUNT ]" || { DYING=1; exit 1; }
 await "shape=31337 on the device" 60 "probe | grep -q shape=31337" \
   && pass "shape=31337 reached the app" || fail "the value never changed: $(probe)"
 
@@ -109,9 +111,8 @@ internal object BornAtRuntime {
 }
 KOTLIN
 sleep 8
-COUNT=$(swaps)
 edit "$VALUES" 'fun value(): Int = .*' 'fun value(): Int = BornAtRuntime.value()'
-await "a generation" 300 "grep -q '♻️' '$METRO_LOG'" || { DYING=1; exit 1; }
+await "a generation of ProbeValues.kt" 300 "grep '♻️' '$METRO_LOG' | grep -q BornAtRuntime" || { DYING=1; exit 1; }
 await "kotlin=777777 on the device" 90 "probe | grep -q kotlin=777777" \
   && pass "a class the apk never had is running" || fail "the generation never reached it: $(probe)"
 

@@ -87,11 +87,12 @@ jobs:
         run: bundle exec pod install
 
       # Compiling React Native from nothing is most of this job, so the build products
-      # are kept and only what changed is recompiled.
+      # are kept and only what changed is recompiled. This is Xcode's own location
+      # because that is the only one the library will look in.
       - name: Cache DerivedData
         uses: actions/cache@v6
         with:
-          path: example/ios/build
+          path: ~/Library/Developer/Xcode/DerivedData
           key: ${{ runner.os }}-derived-${{ hashFiles('example/ios/Podfile.lock') }}-${{ hashFiles('example/probe/**') }}
           restore-keys: |
             ${{ runner.os }}-derived-${{ hashFiles('example/ios/Podfile.lock') }}-

@@ -57,6 +57,15 @@ edit() {
   rm -f "$tmp"
 }
 
+# Counting any swap lets a duplicate event from the previous step satisfy the wait
+# before this file has swapped at all, so the assertion that follows fails for the
+# wrong reason. The watcher does emit duplicates.
+swaps_of() {
+  local file=$1 n
+  n=$(grep -E '✅|♻️' "$METRO_LOG" 2>/dev/null | grep -c "$file") || n=0
+  printf '%s' "$n"
+}
+
 probe() { grep "\[Probe\]" "$PROBE_LOG" 2>/dev/null | tail -1; }
 pid_of() { xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | awk -v b="$BUNDLE" '$3 ~ b {print $1; exit}'; }
 swaps() {
@@ -114,17 +123,17 @@ BEFORE_PID=$(pid_of)
 pass "app is $BUNDLE, pid $BEFORE_PID"
 
 say "patching swift"
-COUNT=$(swaps)
+COUNT=$(swaps_of ProbeValues.swift)
 edit "$VALUES" 'return 1$' 'return 424242'
 # The warm build is still capturing the compile when this lands, so the first save waits it out.
-await "a swap" 600 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || { DYING=1; exit 1; }
+await "a swap of ProbeValues.swift" 600 "[ \$(swaps_of ProbeValues.swift) -gt $COUNT ]" || { DYING=1; exit 1; }
 await "swift=424242 on the device" 60 "probe | grep -q swift=424242" \
   && pass "swift=424242 reached the app" || fail "the value never changed: $(probe)"
 
 say "patching c++"
-COUNT=$(swaps)
+COUNT=$(swaps_of probe.cpp)
 edit "$NATIVE" 'int Probe::shape() { return [0-9]*; }' 'int Probe::shape() { return 31337; }'
-await "a swap" 300 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || { DYING=1; exit 1; }
+await "a swap of probe.cpp" 300 "[ \$(swaps_of probe.cpp) -gt $COUNT ]" || { DYING=1; exit 1; }
 await "shape=31337 on the device" 60 "probe | grep -q shape=31337" \
   && pass "shape=31337 reached the app" || fail "the value never changed: $(probe)"
 
@@ -143,9 +152,9 @@ import Foundation
 }
 SWIFT
 sleep 8
-COUNT=$(swaps)
+COUNT=$(swaps_of ProbeValues.swift)
 edit "$VALUES" 'return 424242' 'return BornAtRuntime().value()'
-await "a swap" 300 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || { DYING=1; exit 1; }
+await "a swap of ProbeValues.swift" 300 "[ \$(swaps_of ProbeValues.swift) -gt $COUNT ]" || { DYING=1; exit 1; }
 await "swift=777777 on the device" 90 "probe | grep -q swift=777777" \
   && pass "a class the app never had is running" || fail "it never reached the app: $(probe)"
 
