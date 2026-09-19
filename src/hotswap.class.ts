@@ -18,6 +18,8 @@ import {
   findSources,
   forwardPort,
   platformsFor,
+  readSwiftCommand,
+  warmGradle,
 } from './library/index.js';
 
 export class Hotswap {
@@ -57,7 +59,7 @@ export class Hotswap {
 
     console.log(`hotswap  watching ${basename(this.config.root)}: ${watched}`);
 
-    new Watcher(this.config.watch, (path) => this.swap(path)).start();
+    new Watcher(this.config.watch, (path) => this.swap(path)).start(() => this.warm());
   }
 
   async check(): Promise<string[]> {
@@ -69,6 +71,30 @@ export class Hotswap {
     ]);
 
     return checkSetup(this.config, { android, ios });
+  }
+
+  // Both compilers are slowest the first time they run, and that first time is a save the
+  // developer is waiting on. It runs here instead, before anything is waiting.
+  private async warm(): Promise<void> {
+    console.log('hotswap  warming the build so the first save does not pay for it');
+
+    // Deferred into the promises, or the first one to throw takes the other with it.
+    const settled = await Promise.allSettled([
+      Promise.resolve().then(() => warmGradle(this.config)),
+      Promise.resolve().then(() => this.captureSwiftCommand()),
+    ]);
+
+    for (const result of settled) {
+      if (result.status === 'rejected') {
+        console.log(
+          `  ⚠️  did not warm up: ${(result.reason as Error).message.split('\n')[0]}`,
+        );
+      }
+    }
+  }
+
+  private captureSwiftCommand(): void {
+    if (this.config.workspace && this.config.scheme) readSwiftCommand(this.config);
   }
 
   private async swapDependents(header: string): Promise<boolean> {
