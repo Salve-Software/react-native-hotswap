@@ -61,7 +61,19 @@ static void serveConnection(int client) {
   while (YES) {
     uint8_t kind = 0;
     if (!readExactly(client, &kind, sizeof(kind))) return;
-    if (kind > 2) return;
+    if (kind > 3) return;
+
+    if (kind == 3) {
+      NSString *name = NSBundle.mainBundle.bundleIdentifier ?: @"";
+      NSData *bytes = [name dataUsingEncoding:NSUTF8StringEncoding];
+      uint32_t length = htonl((uint32_t)bytes.length);
+
+      NSMutableData *out = [NSMutableData dataWithBytes:&length length:sizeof(length)];
+      [out appendData:bytes];
+      if (send(client, out.bytes, out.length, 0) != (ssize_t)out.length) return;
+
+      continue;
+    }
 
     NSString *payload = readFramed(client);
     if (payload == nil) return;

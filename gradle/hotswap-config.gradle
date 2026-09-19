@@ -6,6 +6,7 @@ allprojects {
       def android = project.extensions.findByName("android")
       println "HOTSWAP_MIN_SDK=" + android.defaultConfig.minSdkVersion.apiLevel
       println "HOTSWAP_BUILD_TOOLS=" + android.buildToolsVersion
+      println "HOTSWAP_APPLICATION_ID=" + android.defaultConfig.applicationId
     }
   }
 }

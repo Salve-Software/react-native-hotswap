@@ -11,7 +11,7 @@ import {
   Notice,
   Watcher,
 } from './classes/index.js';
-import { HEADERS } from './constants/index.js';
+import { HEADERS, IDENTITY, IOS_IDENTITY } from './constants/index.js';
 import {
   checkSetup,
   findDependents,
@@ -66,8 +66,8 @@ export class Hotswap {
     forwardPort(this.config.port);
 
     const [android, ios] = await Promise.all([
-      new Agent(this.config.port).listening(),
-      new Agent(this.config.iosPort).listening(),
+      answered(this.config.port, IDENTITY),
+      answered(this.config.iosPort, IOS_IDENTITY),
     ]);
 
     return checkSetup(this.config, { android, ios });
@@ -159,4 +159,14 @@ export class Hotswap {
 
     return platforms.filter((_, at) => listening[at]);
   }
+}
+
+async function answered(
+  port: number,
+  kind: number,
+): Promise<{ listening: boolean; app: string | undefined }> {
+  const agent = new Agent(port);
+  const app = await agent.identify(kind);
+
+  return { listening: app !== undefined || (await agent.listening()), app };
 }

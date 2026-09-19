@@ -11,3 +11,4 @@ export { platformsFor } from './platforms-for.js';
 export { serialize } from './serialize.js';
 export { forgetSwiftCommand, readSwiftCommand } from './read-swift-command.js';
 export { warmGradle } from './warm-gradle.js';
+export { readAgent } from './read-agent.js';

@@ -24,6 +24,7 @@ constexpr unsigned char kClasses = 0;
 constexpr unsigned char kNative = 1;
 constexpr unsigned char kGeneration = 2;
 constexpr unsigned char kNotice = 3;
+constexpr unsigned char kIdentity = 4;
 constexpr const char* kStructuralRedefine =
     "com.android.art.class.structurally_redefine_classes";
 
@@ -280,6 +281,27 @@ unsigned char showNotice(const std::string& title, const std::string& detail) {
   return reply;
 }
 
+// /data/user/0/<package>/files, which is the only name the agent is handed at attach.
+std::string packageFrom(const std::string& filesDir) {
+  const size_t end = filesDir.find_last_of('/');
+  if (end == std::string::npos || end == 0) return "";
+
+  const size_t start = filesDir.find_last_of('/', end - 1);
+
+  return start == std::string::npos ? "" : filesDir.substr(start + 1, end - start - 1);
+}
+
+bool serveIdentity(int client, const std::string& filesDir) {
+  const std::string name = packageFrom(filesDir);
+  uint32_t length = htonl(static_cast<uint32_t>(name.size()));
+
+  std::vector<unsigned char> out(sizeof(length) + name.size());
+  std::memcpy(out.data(), &length, sizeof(length));
+  std::memcpy(out.data() + sizeof(length), name.data(), name.size());
+
+  return send(client, out.data(), out.size(), 0) == static_cast<ssize_t>(out.size());
+}
+
 bool serveNotice(int client, unsigned char& reply) {
   std::string title;
   if (!readString(client, title)) return false;
@@ -345,7 +367,12 @@ void serveConnection(int client, const std::string& filesDir) {
   while (true) {
     unsigned char kind = 0;
     if (!readExactly(client, &kind, sizeof(kind))) return;
-    if (kind > kNotice) return;
+    if (kind > kIdentity) return;
+
+    if (kind == kIdentity) {
+      if (!serveIdentity(client, filesDir)) return;
+      continue;
+    }
 
     unsigned char reply = 0;
     bool served = false;
