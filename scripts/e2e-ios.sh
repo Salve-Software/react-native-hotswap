@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Proves a swap reaches a running app. Needs a booted simulator and a built example.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -12,8 +11,6 @@ VALUES="$EXAMPLE/probe/ios/ProbeValues.swift"
 NATIVE="$EXAMPLE/probe/cpp/probe.cpp"
 BORN="$EXAMPLE/probe/ios/BornAtRuntime.swift"
 METRO_LOG=${METRO_LOG:-$(mktemp)}
-# os_log is a stream, not a buffer that can be asked after the fact the way logcat can,
-# so a reader is left running and the assertions read what it has collected.
 PROBE_LOG=$(mktemp)
 FAILED=0
 
@@ -23,7 +20,7 @@ cleanup() {
     tail -40 "$METRO_LOG" 2>/dev/null | sed 's/^/   /' || true
 
     printf '\n== what the app was saying\n'
-    grep -iE 'hotswap|dlopen|dyld|image' "$PROBE_LOG" 2>/dev/null | tail -30 | sed 's/^/   /' || true
+    grep '\[Hotswap\]' "$PROBE_LOG" 2>/dev/null | tail -30 | sed 's/^/   /' || true
   fi
 
   [ -n "${METRO_PID:-}" ] && kill "$METRO_PID" 2>/dev/null || true
@@ -50,8 +47,6 @@ await() {
   return 0
 }
 
-# `sed -i` drops a sibling temp file into the watched tree and the watcher reports it,
-# so the edit goes through a temp outside the tree and lands as one write.
 edit() {
   local file=$1 pattern=$2 replacement=$3 tmp
   tmp=$(mktemp)
@@ -60,9 +55,6 @@ edit() {
   rm -f "$tmp"
 }
 
-# Counting any swap lets a duplicate event from the previous step satisfy the wait
-# before this file has swapped at all, so the assertion that follows fails for the
-# wrong reason. The watcher does emit duplicates.
 swaps_of() {
   local file=$1 n
   n=$(grep -E '✅|♻️' "$METRO_LOG" 2>/dev/null | grep -c "$file") || n=0
@@ -86,10 +78,6 @@ for _, devices in json.load(sys.stdin)['devices'].items():
 ")}
 [ -n "$UDID" ] || { fail "no booted simulator"; exit 1; }
 
-# No -derivedDataPath. The library finds the running app's objects by asking
-# xcodebuild where OBJROOT is, and that answer is always Xcode's own location, so
-# building anywhere else leaves it compiling a patch against a build that is not
-# the one running.
 say "building the example"
 xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Debug \
   -sdk iphonesimulator -destination "platform=iOS Simulator,id=$UDID" \
@@ -128,7 +116,6 @@ pass "app is $BUNDLE, pid $BEFORE_PID"
 say "patching swift"
 COUNT=$(swaps_of ProbeValues.swift)
 edit "$VALUES" 'return 1$' 'return 424242'
-# The warm build is still capturing the compile when this lands, so the first save waits it out.
 await "a swap of ProbeValues.swift" 600 "[ \$(swaps_of ProbeValues.swift) -gt $COUNT ]" || { DYING=1; exit 1; }
 await "swift=424242 on the device" 60 "probe | grep -q swift=424242" \
   && pass "swift=424242 reached the app" || fail "the value never changed: $(probe)"
@@ -140,9 +127,6 @@ await "a swap of probe.cpp" 300 "[ \$(swaps_of probe.cpp) -gt $COUNT ]" || { DYI
 await "shape=31337 on the device" 60 "probe | grep -q shape=31337" \
   && pass "shape=31337 reached the app" || fail "the value never changed: $(probe)"
 
-# Android has to publish a whole new generation to reach a class the apk never had.
-# iOS does not: the recompiled dylib carries the new class, so this arrives as an
-# ordinary patch. What has to be true on both is that the class runs.
 say "reaching a class the app never had"
 cat > "$BORN" <<'SWIFT'
 import Foundation

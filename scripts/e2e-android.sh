@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Proves a swap reaches a running app. Needs a device on adb and a built example.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -43,8 +42,6 @@ await() {
   return 0
 }
 
-# `sed -i` drops a sibling temp file into the watched tree and the watcher reports it,
-# so the edit goes through a temp outside the tree and lands as one rename.
 edit() {
   local file=$1 pattern=$2 replacement=$3 tmp
   tmp=$(mktemp)
@@ -53,9 +50,6 @@ edit() {
   rm -f "$tmp"
 }
 
-# Counting any swap lets a duplicate event from the previous step satisfy the wait
-# before this file has swapped at all, so the assertion that follows fails for the
-# wrong reason. The watcher does emit duplicates.
 swaps_of() {
   local file=$1 n
   n=$(grep -E '✅|♻️' "$METRO_LOG" 2>/dev/null | grep -c "$file") || n=0
@@ -92,7 +86,6 @@ pass "app is $PACKAGE, pid $BEFORE_PID"
 say "patching kotlin"
 COUNT=$(swaps_of ProbeValues.kt)
 edit "$VALUES" 'fun value(): Int = .*' 'fun value(): Int = 424242'
-# The warm build is still compiling when this lands, so the first save waits it out.
 await "a swap of ProbeValues.kt" 600 "[ \$(swaps_of ProbeValues.kt) -gt $COUNT ]" || { DYING=1; exit 1; }
 await "kotlin=424242 on the device" 60 "probe | grep -q kotlin=424242" \
   && pass "kotlin=424242 reached the app" || fail "the value never changed: $(probe)"

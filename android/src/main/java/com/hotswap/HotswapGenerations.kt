@@ -28,10 +28,6 @@ internal object HotswapGenerations {
       val host =
         HotswapReactHost.running ?: error("no React host to reload; is this a ReactApplication?")
 
-      // `reload` hands back a task and returns. Answering before it finishes says a
-      // generation is running when the instance is still the old one, and whoever asked
-      // goes looking for new code that is not there yet. This is a socket thread, not the
-      // main one, so waiting here leaves the reload the thread it needs.
       val reloaded = host.reload("hotswap published a generation")
 
       if (!reloaded.waitForCompletion(RELOAD_SECONDS, TimeUnit.SECONDS)) {
