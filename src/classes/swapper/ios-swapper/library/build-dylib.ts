@@ -4,20 +4,21 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { PATCHES } from '../../../../constants/index.js';
+import { findSources } from '../../../../library/index.js';
 import { forgetBuildCommands, readBuildCommands } from '../../../../library/index.js';
+import { builtSources } from './built-sources.js';
+import { filesTheAppLacks } from './files-the-app-lacks.js';
 import { nativeArgs } from './native-args.js';
-import { patchArgs, sourceListPath } from './patch-args.js';
+import { patchArgs } from './patch-args.js';
 import { patchFor } from './patch-for.js';
 
 type Where = Pick<
   SwapConfig,
-  'workspace' | 'scheme' | 'derivedData' | 'arch' | 'iosTarget' | 'patchDir'
->;
+  'workspace' | 'scheme' | 'derivedData' | 'arch' | 'iosTarget' | 'patchDir' | 'watch'
+> & { carryNew?: boolean };
 
-export function buildDylib(
-  path: string,
-  { workspace, scheme, derivedData, arch, iosTarget, patchDir }: Where,
-): string {
+export function buildDylib(path: string, where: Where): string {
+  const { iosTarget, patchDir } = where;
   const patch = patchFor(path, readFileSync(path, 'utf8'));
   if (!patch) throw new Error(`${basename(path)} declares no replaceable methods`);
 
@@ -26,10 +27,10 @@ export function buildDylib(
   const file = join(patchDir, patch.file);
   writeFileSync(file, patch.contents);
 
-  const where = { workspace, scheme, derivedData, arch, iosTarget, patchDir };
-
   try {
-    return link(replayed(where, patch) ?? throughXcode(where, patch), iosTarget);
+    const objects = replayed(where, patch) ?? [throughXcode(where, patch)];
+
+    return link(objects, iosTarget);
   } finally {
     // The object is already linked, so the file can go back to being empty.
     writeFileSync(file, patch.placeholder);
@@ -39,7 +40,7 @@ export function buildDylib(
 // Xcode reparses React Native's module maps on every build, which is where its seconds go.
 // The captured invocation with a module cache that survives does the same work in a fifth of
 // a second, and xcodebuild stays as the answer for when the capture no longer fits.
-function replayed(where: Where, patch: Patch): string | undefined {
+function replayed(where: Where, patch: Patch): string[] | undefined {
   try {
     const captured = readBuildCommands(where);
     const swift = patch.file.endsWith('.swift');
@@ -48,7 +49,7 @@ function replayed(where: Where, patch: Patch): string | undefined {
     mkdirSync(cache, { recursive: true });
 
     const args = swift
-      ? swiftReplay(captured.swift, { out, cache })
+      ? swiftReplay(captured.swift, { out, cache, where })
       : nativeReplay(captured.native, { object: join(out, 'patch.o'), cache });
     if (!args) return undefined;
 
@@ -61,8 +62,9 @@ function replayed(where: Where, patch: Patch): string | undefined {
     const object = swift
       ? join(out, patch.file.replace(/\.\w+$/, '.o'))
       : join(out, 'patch.o');
+    if (!existsSync(object)) return undefined;
 
-    return existsSync(object) ? object : undefined;
+    return [object, ...(swift ? carried(where, { captured: captured.swift, out }) : [])];
   } catch {
     forgetBuildCommands(where.scheme as string);
 
@@ -72,22 +74,35 @@ function replayed(where: Where, patch: Patch): string | undefined {
 
 function swiftReplay(
   captured: string[] | undefined,
-  { out, cache }: { out: string; cache: string },
+  { out, cache, where }: { out: string; cache: string; where: Where },
 ): string[] | undefined {
   if (!captured) return undefined;
 
-  const list = sourceListPath(captured);
-  if (!list) return undefined;
+  const built = builtSources({ swift: captured });
+  if (built.length === 0) return undefined;
 
-  const sources = readFileSync(list, 'utf8')
-    .split('\n')
-    .map((line) => line.trim().replace(/^"|"$/g, ''))
-    .filter(Boolean);
+  const extra = filesTheAppLacks(built, findSources(where.watch, ['.swift']));
+  const sources = [...built, ...extra];
 
   const map = join(out, 'output-file-map.json');
   writeFileSync(map, JSON.stringify(objectMap(sources, out)));
 
-  return patchArgs(captured, { map, cache });
+  return [...patchArgs(captured, { map, cache }), ...extra];
+}
+
+// Only after the app has refused: linking a file it already has would give its Swift
+// metadata a second definition, and the app goes down instead of swapping.
+function carried(
+  where: Where,
+  { captured, out }: { captured: string[] | undefined; out: string },
+): string[] {
+  if (!where.carryNew || !captured) return [];
+
+  const built = builtSources({ swift: captured });
+
+  return filesTheAppLacks(built, findSources(where.watch, ['.swift']))
+    .map((file) => join(out, basename(file).replace(/\.\w+$/, '.o')))
+    .filter((object) => existsSync(object));
 }
 
 function nativeReplay(
@@ -144,8 +159,10 @@ function ensurePatches(patchDir: string): void {
 }
 
 // Linking the whole module would load a second copy of its Swift metadata and kill the app.
-function link(object: string, iosTarget: string): string {
-  if (!existsSync(object)) throw new Error(`xcode produced no object at ${object}`);
+function link(objects: string[], iosTarget: string): string {
+  for (const object of objects) {
+    if (!existsSync(object)) throw new Error(`xcode produced no object at ${object}`);
+  }
 
   // dyld keys a loaded image on its install name, so a reused name is never mapped again.
   const out = join(mkdtempSync(join(tmpdir(), 'hotswap-')), `patch-${Date.now()}.dylib`);
@@ -167,7 +184,7 @@ function link(object: string, iosTarget: string): string {
       '-undefined',
       '-Xlinker',
       'dynamic_lookup',
-      object,
+      ...objects,
     ],
     { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 },
   );
