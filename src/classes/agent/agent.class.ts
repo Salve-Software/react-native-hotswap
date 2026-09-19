@@ -25,7 +25,6 @@ export class Agent {
     });
   }
 
-  /** Which app answered, so a second one holding the port is seen rather than assumed. */
   identify(kind: number): Promise<string | undefined> {
     return new Promise((resolve) => {
       const socket = connect({ host: '127.0.0.1', port: this.port });

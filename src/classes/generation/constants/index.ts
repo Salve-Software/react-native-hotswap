@@ -7,7 +7,6 @@ export const DROPPED_WITH_VALUE = [
   '-working-directory',
 ];
 
-// -import-underlying-module wants an ObjC module named after -module-name, new every time.
 export const DROPPED_FLAGS = [
   '-c',
   '-emit-module',

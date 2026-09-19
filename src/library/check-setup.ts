@@ -45,7 +45,6 @@ export function checkSetup(config: SwapConfig, reached: Reached): string[] {
     }),
   ];
 
-  // Without a pod there is nowhere to put a patch, so the rows below would be noise.
   if (config.workspace && config.scheme) {
     lines.push(
       report({
@@ -63,7 +62,6 @@ export function checkSetup(config: SwapConfig, reached: Reached): string[] {
   return lines;
 }
 
-// An app with no podspec of its own swaps Kotlin only.
 function describeTarget({ workspace, scheme }: SwapConfig): string {
   if (!workspace) return 'no workspace found, android only';
   if (!scheme) return 'no podspec here; swift and c++ compile through a pod';
@@ -71,7 +69,6 @@ function describeTarget({ workspace, scheme }: SwapConfig): string {
   return `${scheme} in ${workspace}`;
 }
 
-// A patch created after the last pod install is invisible to the target.
 function missingPatches(patchDir: string): { file: string }[] {
   return PATCHES.filter(({ file }) => !existsSync(join(patchDir, file)));
 }

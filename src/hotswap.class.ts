@@ -74,12 +74,9 @@ export class Hotswap {
     return checkSetup(this.config, { android, ios });
   }
 
-  // Both compilers are slowest the first time they run, and that first time is a save the
-  // developer is waiting on. It runs here instead, before anything is waiting.
   private async warm(): Promise<void> {
     console.log('hotswap  warming the build so the first save does not pay for it');
 
-    // Deferred into the promises, or the first one to throw takes the other with it.
     const settled = await Promise.allSettled([
       Promise.resolve().then(() => warmGradle(this.config)),
       Promise.resolve().then(() => this.captureSwiftCommand()),

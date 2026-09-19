@@ -1,4 +1,3 @@
-// BaseReactPackage and TurboReactPackage end with it, so the name matches by its ending.
 const DECLARES =
   /^\s*(?:\w+\s+)*class\s+(\w+)[^{]*?(?::|implements)[^{]*\b\w*ReactPackage\b/m;
 

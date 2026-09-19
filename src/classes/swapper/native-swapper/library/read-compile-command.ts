@@ -21,7 +21,6 @@ export function readCompileCommand(
     );
   }
 
-  // A library reached through node_modules records a path the developer never edits.
   const wanted = real(path);
 
   for (const database of databases) {

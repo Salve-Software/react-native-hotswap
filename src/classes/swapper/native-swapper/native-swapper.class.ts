@@ -36,7 +36,6 @@ export class NativeSwapper implements Swapper {
       const original = findNativeLibrary(entry, this.config);
       const library = buildSharedObject(entry, original);
 
-      // The room is the original's: an edit that grows a function would overstate it.
       const room = new Map(
         readSymbols(original, nm).map(({ name: at, size }) => [at, size]),
       );

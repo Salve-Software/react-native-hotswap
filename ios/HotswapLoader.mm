@@ -53,7 +53,6 @@ static uint8_t loadImage(NSString *path) {
         path.lastPathComponent,
         replaced ? @"swift replacements applied" : @"no swift replacements", rebound, patched);
 
-  // Loading without changing anything leaves the old code running, silently.
   return (replaced || rebound > 0 || patched > 0) ? 0 : 2;
 }
 

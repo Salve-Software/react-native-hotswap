@@ -10,7 +10,6 @@
 #import "HotswapImage.h"
 
 bool HotswapFindImage(const char *path, HotswapImage &into) {
-  // A temporary file lives under /var and dyld records it as /private/var.
   char wanted[PATH_MAX];
   if (realpath(path, wanted) == nullptr) return false;
 
@@ -72,7 +71,6 @@ void HotswapEachAppImage(const mach_header_64 *except, void (^body)(const Hotswa
     if (header == nullptr || header->magic != MH_MAGIC_64 || header == except) continue;
     if (header->filetype != MH_EXECUTE && header->filetype != MH_DYLIB) continue;
 
-    // Rewriting a slot inside a system library would corrupt an unrelated process.
     const char *name = _dyld_get_image_name(i);
     if (name == nullptr || ![@(name) hasPrefix:bundle]) continue;
 
@@ -130,7 +128,6 @@ bool HotswapIsCode(const HotswapImage &image, const nlist_64 &symbol) {
     if (command->cmd == LC_SEGMENT_64) {
       auto *segment = (const segment_command_64 *)command;
 
-      // Sections are numbered from one across every segment, so the owner is counted to.
       if (symbol.n_sect <= index + segment->nsects) {
         return (segment->initprot & VM_PROT_EXECUTE) != 0;
       }

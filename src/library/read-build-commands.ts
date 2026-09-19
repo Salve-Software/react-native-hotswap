@@ -27,12 +27,10 @@ export function forgetBuildCommands(scheme: string): void {
   rmSync(cacheFor(scheme), { force: true });
 }
 
-// Xcode stopped supporting -dry-run, so the invocations come from a real build and are kept.
 export function readBuildCommands(where: Where): Commands {
   const cache = cacheFor(where.scheme as string);
   if (existsSync(cache)) return JSON.parse(readFileSync(cache, 'utf8')) as Commands;
 
-  // A build that recompiles nothing prints no invocation, so both patch files are touched.
   for (const { file, placeholder } of PATCHES) {
     writeFileSync(join(where.patchDir, file), placeholder);
   }

@@ -66,7 +66,6 @@ class LoadedClasses {
     if (classes_ != nullptr) gJvmti->Deallocate(reinterpret_cast<unsigned char*>(classes_));
   }
 
-  // Every copy: a generation loads the same class again, under its own loader.
   std::vector<jclass> find(const std::string& className) const {
     const std::string wanted = "L" + className + ";";
     std::vector<jclass> found;
@@ -100,9 +99,7 @@ jvmtiError redefine(const std::vector<Definition>& definitions) {
 
   jvmtiError result = JVMTI_ERROR_INVALID_CLASS;
 
-  // Releasing LoadedClasses' local references after detaching aborts the runtime.
   {
-    // GetLoadedClasses walks every class the runtime holds, so the batch takes one snapshot.
     const LoadedClasses loaded(env);
 
     std::vector<jvmtiClassDefinition> classes;
@@ -111,7 +108,6 @@ jvmtiError redefine(const std::vector<Definition>& definitions) {
     for (const Definition& definition : definitions) {
       const std::vector<jclass> targets = loaded.find(definition.className);
 
-      // A class not reached yet will load from the dex on disk, so skipping beats failing.
       if (targets.empty()) {
         LOGI("skipping %s, not loaded yet", definition.className.c_str());
         continue;
@@ -281,7 +277,6 @@ unsigned char showNotice(const std::string& title, const std::string& detail) {
   return reply;
 }
 
-// /data/user/0/<package>/files, which is the only name the agent is handed at attach.
 std::string packageFrom(const std::string& filesDir) {
   const size_t end = filesDir.find_last_of('/');
   if (end == std::string::npos || end == 0) return "";
@@ -413,7 +408,6 @@ void listenForever(int port, std::string filesDir) {
     const int client = accept(server, nullptr, nullptr);
 
     if (client < 0) {
-      // Anything but EINTR means the socket is gone, and looping would spin a core.
       if (errno == EINTR || errno == ECONNABORTED) continue;
 
       LOGE("accept failed: %s", std::strerror(errno));

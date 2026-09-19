@@ -20,10 +20,8 @@ struct Replacement {
   uint32_t room;
 };
 
-// b <target>, when the two sit within the 128MB an imm26 displacement reaches.
 constexpr size_t kNearJump = 4;
 
-// ldr x16, #8 ; br x16 ; .quad target, for when they do not.
 constexpr size_t kFarJump = 16;
 
 constexpr intptr_t kBranchReach = 1 << 27;
@@ -45,7 +43,6 @@ std::vector<std::string> loadedLibraries() {
   return paths;
 }
 
-// RTLD_NOLOAD asks the linker without ever pulling a new library in.
 void* findOriginal(const std::vector<std::string>& paths, const char* name, void* except) {
   for (const std::string& path : paths) {
     void* handle = dlopen(path.c_str(), RTLD_NOW | RTLD_NOLOAD);
@@ -77,7 +74,6 @@ struct Arena {
 
 std::vector<Arena> gArenas;
 
-// The patch library lands routinely further than imm26 reaches.
 void* trampolineNear(void* target) {
   const size_t page = static_cast<size_t>(getpagesize());
 
@@ -90,7 +86,6 @@ void* trampolineNear(void* target) {
     return slot;
   }
 
-  // mmap treats the address as a hint and is free to ignore it, so each one is checked.
   for (intptr_t step = static_cast<intptr_t>(page); step < kBranchReach; step <<= 1) {
     for (int sign = 1; sign >= -1; sign -= 2) {
       auto hint = (reinterpret_cast<uintptr_t>(target) + static_cast<uintptr_t>(sign * step)) &
@@ -149,7 +144,6 @@ bool writeJump(void* from, const Replacement& to) {
     }
   }
 
-  // Four bytes is the shortest function arm64 emits, so nothing is too small.
   if (to.room < kNearJump) {
     LOGE("%s is %u bytes, too short to redirect; rebuild", to.name, to.room);
     return false;
@@ -165,7 +159,6 @@ bool writeJump(void* from, const Replacement& to) {
   const uint32_t branch = 0x14000000u | (static_cast<uint32_t>(delta >> 2) & 0x03FFFFFFu);
   std::memcpy(from, &branch, sizeof(branch));
 
-  // The old bytes may still sit in the instruction cache.
   __builtin___clear_cache(static_cast<char*>(from), static_cast<char*>(from) + kNearJump);
 
   return true;
@@ -186,7 +179,6 @@ bool write(const std::string& path, const std::vector<unsigned char>& image) {
 unsigned char hotswapLoadNative(const std::string& filesDir,
                                 const std::vector<unsigned char>& image,
                                 const std::vector<NativeSymbol>& symbols) {
-  // The linker keys a library on the path it was opened with, so the name must differ.
   const std::string path = filesDir + "/hotswap-patch-" + std::to_string(gLoaded++) + ".so";
 
   if (!write(path, image)) {

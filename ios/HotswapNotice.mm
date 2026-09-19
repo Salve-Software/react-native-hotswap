@@ -79,7 +79,6 @@ static void buildWindow(UIWindowScene *scene) {
   gWindow.userInteractionEnabled = NO;
   gWindow.rootViewController = holder;
 
-  // Showing it without making it key, so the app keeps the keyboard and every touch.
   gWindow.hidden = NO;
 }
 

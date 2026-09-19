@@ -15,7 +15,6 @@ export function sendNative(path: string, symbols: NativeSymbol[]): Buffer {
   ]);
 }
 
-// The size travels along because the agent needs to know the original has room.
 function frame({ name, size }: NativeSymbol): Buffer {
   const bytes = Buffer.alloc(4);
   bytes.writeUInt32BE(size);

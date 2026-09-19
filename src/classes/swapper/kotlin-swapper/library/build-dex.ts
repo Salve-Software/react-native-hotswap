@@ -49,7 +49,6 @@ export function buildDex({
   return collectDexes(out);
 }
 
-// ART accepts exactly one class def per redefinition.
 function collectDexes(out: string): ClassDefinition[] {
   const found: ClassDefinition[] = [];
 

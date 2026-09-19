@@ -17,7 +17,6 @@ export function buildSharedObject(entry: CompileCommand, against: string): strin
     maxBuffer: 64 * 1024 * 1024,
   });
 
-  // The linker keys a library on its soname, so a reused name is never mapped again.
   const name = `libhotswap-patch-${Date.now()}.so`;
   const library = join(at, name);
 
@@ -31,7 +30,6 @@ export function buildSharedObject(entry: CompileCommand, against: string): strin
       '-o',
       library,
       object,
-      // Without DT_NEEDED on the library it was cut from, the patch will not load.
       `-L${dirname(against)}`,
       `-l${basename(against).replace(/^lib|\.so$/g, '')}`,
     ],

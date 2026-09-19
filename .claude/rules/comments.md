@@ -1,66 +1,48 @@
 # Comments
 
-**As lean as possible.** One line or nothing.
+**Do not write comments in code.** Not one line, not above a block, not to warn about a trap.
+This has been asked for more times than it should have been.
 
-## JSDoc — allowed, short, and only in three places
+That includes every form of it:
 
-One line. Says what **that** thing is, or why it exists.
+- `//` anywhere, at any indentation, however short
+- paragraph blocks explaining a decision
+- JSDoc on a method, a property, a constant, a variable or a barrel export
+- section markers like `// MARK:` or `// ===`
+- a comment naming a platform API so it can be found by search
 
-| Place                           | Example                                                             |
-| ------------------------------- | ------------------------------------------------------------------- |
-| Above a class                   | `/** Attaches the JVMTI agent once, on a debuggable build only. */` |
-| Above a type, in `types/`       | `/** What to compile, and where from. */`                           |
-| Above a function, in `library/` | `/** Derives the JNI class name a Kotlin file compiles into. */`    |
+## The one exception, and it is narrow
 
-**Nothing beyond that.** No JSDoc on a method, a property, a constant, a variable or a barrel
-export. No paragraph blocks. If it does not fit on one line, what is left over is decision
-context — it goes in the commit message or the README, not in the file.
+A single-line `/** ... */` directly above **an exported class, an exported type in `types/`, or
+an exported function in `library/`**, saying what that thing is. One line. Nothing else gets
+one, including the module-private helpers in the same file.
 
-The test: if the text stays true when pasted onto another thing of the same kind, it says
-nothing. `"Returns the current state"` fits any method; `"A flat fold reserves nothing"` fits
-this one.
-
-A good name needs no JSDoc. `buildDex`, `watchKotlin` and `findGradle` have none, and are not
-worse for it.
-
-## Comments inside a method or function
-
-**Would deleting this break someone?** If not, delete it. Four kinds get through:
-
-| Kind                              | Example in this repository                                     |
-| --------------------------------- | -------------------------------------------------------------- |
-| Looks like a bug and is not       | asking ART for fewer capabilities than the agent needs         |
-| Deliberate absence                | the old `.so` never being unloaded, only shadowed              |
-| Invisible trap                    | `exists()` following a symlink, so a stale one reads as absent |
-| Platform limit the contract hides | `attachJvmtiAgent` rejecting any path containing `=`           |
-
-What does not get through: narrating the next block, repeating the function name, explaining
-the pattern instead of the instance, marking sections with `// MARK:` or `// ===`.
-
-## Comments that name a platform API
-
-A native symbol **is written exactly as it is**, so it can be found by search.
-
-```kotlin
-// Debug.attachJvmtiAgent rejects paths containing '='.
+```ts
+/** Derives the JNI class name a Kotlin file compiles into. */
+export function resolveClassName(source: string, fileName: string): string {}
 ```
 
-## Exception
+If it does not fit on one line, it was never a name — it was decision context.
 
-`TODO(sdk):` marking what depends on a platform piece that is not built yet. Today that is the
-iOS side.
+## Where decision context goes
+
+The commit message, and nowhere else. That is where someone reads it: once, while deciding
+whether the decision still holds. A comment repeats it forever to people who did not ask.
+
+`rules/history.md` is for a decision that was tried and rejected. `README.md` and `docs/` are
+for what a consumer needs. A file is for code.
 
 ## The check
 
-Two things are mechanical, and both have been broken more than once:
+Both of these must print nothing:
 
 ```bash
-# no comment spans more than one line
-# no /** is indented — an indented one is sitting on a method, which is not one of the three places
-grep -rn "^\s\+/\*\*" src android/src ios | grep -v __tests__
+grep -rn "^[ \t]*//" src android/src ios --include=*.ts --include=*.kt --include=*.mm --include=*.cpp --include=*.h | grep -v vendor
+grep -rn "^[ \t]\+/\*\*" src android/src ios | grep -v __tests__
 ```
 
-A paragraph explaining a decision does not belong in the file at all. It goes in the commit
-message, where it is read once by someone deciding whether the decision still holds.
+The first finds an inline comment. The second finds JSDoc that is indented, which means it is
+sitting on a method or a private function rather than on an export.
 
-When in doubt, do not comment.
+`android/src/main/cpp/vendor/jvmti.h` is excluded: it comes from AOSP and its licence header
+stays untouched.

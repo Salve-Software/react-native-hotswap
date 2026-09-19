@@ -14,8 +14,6 @@ export function readAgent(
   if (!app)
     return { ok: true, detail: `port ${port}, an agent too old to say which app` };
 
-  // A second app on the device takes the port and the first loses it without a word, so
-  // every swap would land somewhere else while this row stayed green.
   if (expected && app !== expected) {
     return { ok: false, detail: `port ${port} is held by ${app}, not ${expected}` };
   }

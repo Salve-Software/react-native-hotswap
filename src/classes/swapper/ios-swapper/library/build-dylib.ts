@@ -32,14 +32,10 @@ export function buildDylib(path: string, where: Where): string {
 
     return link(objects, iosTarget);
   } finally {
-    // The object is already linked, so the file can go back to being empty.
     writeFileSync(file, patch.placeholder);
   }
 }
 
-// Xcode reparses React Native's module maps on every build, which is where its seconds go.
-// The captured invocation with a module cache that survives does the same work in a fifth of
-// a second, and xcodebuild stays as the answer for when the capture no longer fits.
 function replayed(where: Where, patch: Patch): string[] | undefined {
   try {
     const captured = readBuildCommands(where);
@@ -90,8 +86,6 @@ function swiftReplay(
   return [...patchArgs(captured, { map, cache }), ...extra];
 }
 
-// Only after the app has refused: linking a file it already has would give its Swift
-// metadata a second definition, and the app goes down instead of swapping.
 function carried(
   where: Where,
   { captured, out }: { captured: string[] | undefined; out: string },
@@ -144,7 +138,6 @@ function throughXcode(where: Where, patch: Patch): string {
   return objectFor({ ...where, patch });
 }
 
-// CocoaPods globs at install time, so a file created later is invisible until the next one.
 function ensurePatches(patchDir: string): void {
   const missing = PATCHES.filter(({ file }) => !existsSync(join(patchDir, file)));
   if (missing.length === 0) return;
@@ -158,13 +151,11 @@ function ensurePatches(patchDir: string): void {
   throw new Error(`created ${names}; run pod install once, then save again`);
 }
 
-// Linking the whole module would load a second copy of its Swift metadata and kill the app.
 function link(objects: string[], iosTarget: string): string {
   for (const object of objects) {
     if (!existsSync(object)) throw new Error(`xcode produced no object at ${object}`);
   }
 
-  // dyld keys a loaded image on its install name, so a reused name is never mapped again.
   const out = join(mkdtempSync(join(tmpdir(), 'hotswap-')), `patch-${Date.now()}.dylib`);
 
   execFileSync(

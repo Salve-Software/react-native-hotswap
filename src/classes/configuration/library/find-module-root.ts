@@ -9,7 +9,6 @@ export function findModuleRoot(from: string): string {
   return from;
 }
 
-// A podspec is the only marker an iOS-only library has.
 function isLibrary(at: string): boolean {
   if (existsSync(join(at, 'android/src/main/java'))) return true;
 
