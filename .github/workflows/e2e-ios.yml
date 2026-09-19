@@ -1,0 +1,122 @@
+name: Swap iOS
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/e2e-ios.yml'
+      - 'scripts/e2e-ios.sh'
+      - 'ios/**'
+      - 'src/**'
+      - 'example/**'
+  pull_request:
+    paths:
+      - '.github/workflows/e2e-ios.yml'
+      - 'scripts/e2e-ios.sh'
+      - 'ios/**'
+      - 'src/**'
+      - 'example/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  swap:
+    name: Swap Into A Running App
+    runs-on: macOS-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: 16.4
+
+      - name: Cache bun dependencies
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('example/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Install the library (bun)
+        run: bun install --frozen-lockfile
+
+      # The example links the library with file:.., so it installs on its own and npm has to
+      # find lib/ already built by the library's prepare script.
+      - name: Install the example (npm)
+        working-directory: example
+        run: npm ci
+
+      - name: Setup Ruby (bundle)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: example
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cocoapods/repos
+            example/ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('example/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install Pods
+        working-directory: example/ios
+        run: bundle exec pod install
+
+      # Compiling React Native from nothing is most of this job, so the build products
+      # are kept and only what changed is recompiled.
+      - name: Cache DerivedData
+        uses: actions/cache@v6
+        with:
+          path: example/ios/build
+          key: ${{ runner.os }}-derived-${{ hashFiles('example/ios/Podfile.lock') }}-${{ hashFiles('example/probe/**') }}
+          restore-keys: |
+            ${{ runner.os }}-derived-${{ hashFiles('example/ios/Podfile.lock') }}-
+            ${{ runner.os }}-derived-
+
+      # Whichever iPhone the image happens to ship, rather than a runtime named here
+      # that a later image quietly stops carrying.
+      - name: Boot a simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          for runtime, devices in json.load(sys.stdin)['devices'].items():
+              for device in devices:
+                  if 'iPhone' in device['name']:
+                      print(device['udid']); sys.exit()
+          ")
+          [ -n "$UDID" ] || { echo 'no iPhone simulator on this image'; exit 1; }
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl list devices | grep Booted
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+
+      - name: Swap into a running app
+        run: bash scripts/e2e-ios.sh
+
+      - name: What the watcher said
+        if: failure()
+        run: tail -60 /tmp/e2e-ios-build.log || true
