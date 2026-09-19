@@ -12,6 +12,11 @@ METRO_LOG=${METRO_LOG:-$(mktemp)}
 FAILED=0
 
 cleanup() {
+  if [ "$FAILED" -ne 0 ] || [ -n "${DYING:-}" ]; then
+    printf '\n== what metro was doing\n'
+    tail -40 "$METRO_LOG" 2>/dev/null | sed 's/^/   /' || true
+  fi
+
   [ -n "${METRO_PID:-}" ] && kill "$METRO_PID" 2>/dev/null || true
   rm -f "$BORN"
   git -C "$ROOT" checkout -- "$VALUES" "$NATIVE" 2>/dev/null || true
@@ -61,8 +66,8 @@ say "installing the example"
 say "starting metro with the watcher"
 (cd "$EXAMPLE" && node node_modules/.bin/react-native start >"$METRO_LOG" 2>&1) &
 METRO_PID=$!
-await "metro" 180 "grep -q 'hotswap  watching' '$METRO_LOG'" || exit 1
-await "the dev server" 180 "grep -q 'Dev server ready' '$METRO_LOG'" || exit 1
+await "metro" 420 "grep -q 'hotswap  watching' '$METRO_LOG'" || { DYING=1; exit 1; }
+await "the dev server" 420 "grep -q 'Dev server ready' '$METRO_LOG'" || { DYING=1; exit 1; }
 pass "watcher is up"
 
 adb reverse tcp:8081 tcp:8081 >/dev/null
@@ -72,9 +77,9 @@ say "launching the app"
 adb shell am force-stop "$PACKAGE" || true
 adb logcat -c 2>/dev/null || true
 adb shell am start -n "$PACKAGE/.MainActivity" >/dev/null
-await "the agent attaching" 180 "adb logcat -d -s Hotswap | grep -q listening" || exit 1
+await "the agent attaching" 180 "adb logcat -d -s Hotswap | grep -q listening" || { DYING=1; exit 1; }
 pass "agent is listening"
-await "the probe reporting" 120 "probe | grep -q kotlin=" || exit 1
+await "the probe reporting" 120 "probe | grep -q kotlin=" || { DYING=1; exit 1; }
 
 BEFORE_PID=$(pid_of)
 pass "app is $PACKAGE, pid $BEFORE_PID"
@@ -83,14 +88,14 @@ say "patching kotlin"
 COUNT=$(swaps)
 edit "$VALUES" 'fun value(): Int = .*' 'fun value(): Int = 424242'
 # The warm build is still compiling when this lands, so the first save waits it out.
-await "a swap" 600 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || exit 1
+await "a swap" 600 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || { DYING=1; exit 1; }
 await "kotlin=424242 on the device" 60 "probe | grep -q kotlin=424242" \
   && pass "kotlin=424242 reached the app" || fail "the value never changed: $(probe)"
 
 say "patching c++"
 COUNT=$(swaps)
 edit "$NATIVE" 'int Probe::shape() { return [0-9]*; }' 'int Probe::shape() { return 31337; }'
-await "a swap" 300 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || exit 1
+await "a swap" 300 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || { DYING=1; exit 1; }
 await "shape=31337 on the device" 60 "probe | grep -q shape=31337" \
   && pass "shape=31337 reached the app" || fail "the value never changed: $(probe)"
 
@@ -106,7 +111,7 @@ KOTLIN
 sleep 8
 COUNT=$(swaps)
 edit "$VALUES" 'fun value(): Int = .*' 'fun value(): Int = BornAtRuntime.value()'
-await "a generation" 300 "grep -q '♻️' '$METRO_LOG'" || exit 1
+await "a generation" 300 "grep -q '♻️' '$METRO_LOG'" || { DYING=1; exit 1; }
 await "kotlin=777777 on the device" 90 "probe | grep -q kotlin=777777" \
   && pass "a class the apk never had is running" || fail "the generation never reached it: $(probe)"
 

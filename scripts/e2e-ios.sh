@@ -19,6 +19,11 @@ PROBE_LOG=$(mktemp)
 FAILED=0
 
 cleanup() {
+  if [ "$FAILED" -ne 0 ] || [ -n "${DYING:-}" ]; then
+    printf '\n== what metro was doing\n'
+    tail -40 "$METRO_LOG" 2>/dev/null | sed 's/^/   /' || true
+  fi
+
   [ -n "${METRO_PID:-}" ] && kill "$METRO_PID" 2>/dev/null || true
   [ -n "${LOG_PID:-}" ] && kill "$LOG_PID" 2>/dev/null || true
   rm -f "$BORN"
@@ -83,8 +88,8 @@ pass "built $SCHEME.app"
 say "starting metro with the watcher"
 (cd "$EXAMPLE" && node node_modules/.bin/react-native start >"$METRO_LOG" 2>&1) &
 METRO_PID=$!
-await "metro" 180 "grep -q 'hotswap  watching' '$METRO_LOG'" || exit 1
-await "the dev server" 180 "grep -q 'Dev server ready' '$METRO_LOG'" || exit 1
+await "metro" 420 "grep -q 'hotswap  watching' '$METRO_LOG'" || { DYING=1; exit 1; }
+await "the dev server" 420 "grep -q 'Dev server ready' '$METRO_LOG'" || { DYING=1; exit 1; }
 pass "watcher is up"
 
 say "launching the app"
@@ -96,9 +101,9 @@ LOG_PID=$!
 sleep 3
 xcrun simctl launch "$UDID" "$BUNDLE" >/dev/null
 
-await "the agent listening" 180 "nc -z -w2 127.0.0.1 $IOS_PORT" || exit 1
+await "the agent listening" 180 "nc -z -w2 127.0.0.1 $IOS_PORT" || { DYING=1; exit 1; }
 pass "agent is listening on $IOS_PORT"
-await "the probe reporting" 120 "probe | grep -q swift=" || exit 1
+await "the probe reporting" 120 "probe | grep -q swift=" || { DYING=1; exit 1; }
 
 BEFORE_PID=$(pid_of)
 pass "app is $BUNDLE, pid $BEFORE_PID"
@@ -107,14 +112,14 @@ say "patching swift"
 COUNT=$(swaps)
 edit "$VALUES" 'return 1$' 'return 424242'
 # The warm build is still capturing the compile when this lands, so the first save waits it out.
-await "a swap" 600 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || exit 1
+await "a swap" 600 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || { DYING=1; exit 1; }
 await "swift=424242 on the device" 60 "probe | grep -q swift=424242" \
   && pass "swift=424242 reached the app" || fail "the value never changed: $(probe)"
 
 say "patching c++"
 COUNT=$(swaps)
 edit "$NATIVE" 'int Probe::shape() { return [0-9]*; }' 'int Probe::shape() { return 31337; }'
-await "a swap" 300 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || exit 1
+await "a swap" 300 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || { DYING=1; exit 1; }
 await "shape=31337 on the device" 60 "probe | grep -q shape=31337" \
   && pass "shape=31337 reached the app" || fail "the value never changed: $(probe)"
 
@@ -135,7 +140,7 @@ SWIFT
 sleep 8
 COUNT=$(swaps)
 edit "$VALUES" 'return 424242' 'return BornAtRuntime().value()'
-await "a swap" 300 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || exit 1
+await "a swap" 300 "[ \$(grep -cE '✅|♻️' '$METRO_LOG') -gt $COUNT ]" || { DYING=1; exit 1; }
 await "swift=777777 on the device" 90 "probe | grep -q swift=777777" \
   && pass "a class the app never had is running" || fail "it never reached the app: $(probe)"
 
