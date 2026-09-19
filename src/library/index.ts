@@ -9,3 +9,5 @@ export { packageRoot } from './package-root.js';
 export { parseIncludes } from './parse-includes.js';
 export { platformsFor } from './platforms-for.js';
 export { serialize } from './serialize.js';
+export { forgetSwiftCommand, readSwiftCommand } from './read-swift-command.js';
+export { warmGradle } from './warm-gradle.js';

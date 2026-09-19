@@ -1,9 +1,11 @@
 import type { Patch, SwapConfig } from '../../../../types/index.js';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { PATCHES } from '../../../../constants/index.js';
+import { forgetSwiftCommand, readSwiftCommand } from '../../../../library/index.js';
+import { patchArgs, sourceListPath } from './patch-args.js';
 import { patchFor } from './patch-for.js';
 
 type Where = Pick<
@@ -23,30 +25,86 @@ export function buildDylib(
   const file = join(patchDir, patch.file);
   writeFileSync(file, patch.contents);
 
-  try {
-    execFileSync(
-      'xcodebuild',
-      [
-        '-workspace',
-        workspace as string,
-        '-scheme',
-        scheme as string,
-        '-configuration',
-        'Debug',
-        '-sdk',
-        'iphonesimulator',
-        '-derivedDataPath',
-        derivedData as string,
-        'build',
-      ],
-      { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 },
-    );
+  const where = { workspace, scheme, derivedData, arch, iosTarget, patchDir };
 
-    return link(objectFor({ derivedData, scheme, arch, patch }), iosTarget);
+  try {
+    return link(replayed(where, patch) ?? throughXcode(where, patch), iosTarget);
   } finally {
     // The object is already linked, so the file can go back to being empty.
     writeFileSync(file, patch.placeholder);
   }
+}
+
+// Xcode reparses React Native's module maps on every build, which is where its seconds go.
+// The captured invocation with a module cache that survives does the same work in a fifth of
+// a second, and xcodebuild stays as the answer for when the capture no longer fits.
+function replayed(where: Where, patch: Patch): string | undefined {
+  if (!patch.file.endsWith('.swift')) return undefined;
+
+  try {
+    const captured = readSwiftCommand(where);
+    const list = sourceListPath(captured);
+    if (!list) return undefined;
+
+    const out = mkdtempSync(join(tmpdir(), 'hotswap-'));
+    const cache = join(tmpdir(), `hotswap-modules-${where.scheme}`);
+    mkdirSync(cache, { recursive: true });
+
+    const sources = readFileSync(list, 'utf8')
+      .split('\n')
+      .map((line) => line.trim().replace(/^"|"$/g, ''))
+      .filter(Boolean);
+
+    const map = join(out, 'output-file-map.json');
+    writeFileSync(map, JSON.stringify(objectMap(sources, out)));
+
+    const args = patchArgs(captured, { map, cache });
+    execFileSync(args[0] as string, args.slice(1), {
+      cwd: join(dirname(where.workspace as string), 'Pods'),
+      stdio: 'pipe',
+      maxBuffer: 64 * 1024 * 1024,
+    });
+
+    const object = join(out, patch.file.replace(/\.\w+$/, '.o'));
+
+    return existsSync(object) ? object : undefined;
+  } catch {
+    forgetSwiftCommand(where.scheme as string);
+
+    return undefined;
+  }
+}
+
+function objectMap(sources: string[], out: string): Record<string, unknown> {
+  const map: Record<string, unknown> = { '': {} };
+
+  for (const source of sources) {
+    map[source] = { object: join(out, basename(source).replace(/\.\w+$/, '.o')) };
+  }
+
+  return map;
+}
+
+function throughXcode(where: Where, patch: Patch): string {
+  execFileSync(
+    'xcodebuild',
+    [
+      '-workspace',
+      where.workspace as string,
+      '-scheme',
+      where.scheme as string,
+      '-configuration',
+      'Debug',
+      '-sdk',
+      'iphonesimulator',
+      '-derivedDataPath',
+      where.derivedData as string,
+      'build',
+    ],
+    { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 },
+  );
+
+  return objectFor({ ...where, patch });
 }
 
 // CocoaPods globs at install time, so a file created later is invisible until the next one.
