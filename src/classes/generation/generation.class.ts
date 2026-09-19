@@ -16,13 +16,6 @@ export class Generation {
 
   constructor(private readonly config: SwapConfig) {}
 
-  /**
-   * Whether patching has stopped being able to reach this platform.
-   *
-   * An iOS generation is a module of its own, so its types are not the ones a replacement
-   * names and a patch lands on classes nothing is using any more. ART has no such split: a
-   * redefinition reaches every loaded copy, so Android keeps its fast path.
-   */
   supersedesPatching(platform: Platform): boolean {
     return platform === 'ios' && this.published > 0;
   }
@@ -64,8 +57,10 @@ export class Generation {
   }
 
   private forIos(): Promise<number> {
-    const moduleName = `Hotswap${this.config.scheme}Gen${++this.published}`;
+    const moduleName = `Hotswap${this.config.scheme}Gen${this.published + 1}`;
     const dylib = buildIosGeneration(this.config, moduleName);
+
+    this.published++;
 
     return new Agent(this.config.iosPort).send(sendIosGeneration(dylib));
   }

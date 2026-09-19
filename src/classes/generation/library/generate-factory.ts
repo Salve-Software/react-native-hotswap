@@ -5,6 +5,12 @@ const DECLARED =
 export function generateFactory(sources: string[]): string {
   const names = [...new Set(sources.flatMap(classesIn))];
 
+  if (names.length === 0) {
+    throw new Error(
+      'no @objc class here, so a generation would reload and change nothing',
+    );
+  }
+
   const cases = names.map(
     (name) =>
       `  case "${name}": return unsafeBitCast(${name}.self, to: UnsafeRawPointer.self)`,
