@@ -18,7 +18,9 @@ SwiftDriver probe normal arm64
 
 describe('extractSwiftCommand', () => {
   it('finds the invocation for the module asked for, not the first one', () => {
-    expect(extractSwiftCommand(LOG, { moduleName: 'other', arch: 'arm64' })).toContain('other');
+    expect(extractSwiftCommand(LOG, { moduleName: 'other', arch: 'arm64' })).toContain(
+      'other',
+    );
     expect(extractSwiftCommand(LOG, { moduleName: 'probe', arch: 'arm64' })).toContain(
       '@/build/probe.SwiftFileList',
     );
@@ -34,18 +36,24 @@ describe('extractSwiftCommand', () => {
   });
 
   it('an architecture the log never built has no invocation', () => {
-    expect(extractSwiftCommand(LOG, { moduleName: 'probe', arch: 'x86_64' })).toBeUndefined();
+    expect(
+      extractSwiftCommand(LOG, { moduleName: 'probe', arch: 'x86_64' }),
+    ).toBeUndefined();
   });
 
   it('a module the log never compiled has no invocation', () => {
-    expect(extractSwiftCommand(LOG, { moduleName: 'missing', arch: 'arm64' })).toBeUndefined();
+    expect(
+      extractSwiftCommand(LOG, { moduleName: 'missing', arch: 'arm64' }),
+    ).toBeUndefined();
   });
 
   it('the escaping xcodebuild puts in front of = is undone', () => {
     const log =
       'builtin-SwiftDriver -- /usr/bin/swiftc -module-name a -target arm64-apple-ios18.0-simulator -DX\\=1';
 
-    expect(extractSwiftCommand(log, { moduleName: 'a', arch: 'arm64' })).toContain('-DX=1');
+    expect(extractSwiftCommand(log, { moduleName: 'a', arch: 'arm64' })).toContain(
+      '-DX=1',
+    );
   });
 
   it('a log with no swift compile at all yields nothing', () => {
