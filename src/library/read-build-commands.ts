@@ -37,7 +37,10 @@ export function readBuildCommands(where: Where): Commands {
 
   const log = build(where);
   const commands: Commands = {
-    swift: extractSwiftCommand(log, where.scheme as string),
+    swift: extractSwiftCommand(log, {
+      moduleName: where.scheme as string,
+      arch: where.arch,
+    }),
     native: extractClangCommand(log, { file: NATIVE_PATCH.file, arch: where.arch }),
   };
 
