@@ -1996,7 +1996,7 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios/ReactCodegen`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
-  - RNHotswap (from `../node_modules/react-native-hotswap`)
+  - "RNHotswap (from `../node_modules/@salve-software/react-native-hotswap`)"
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 EXTERNAL SOURCES:
@@ -2154,7 +2154,7 @@ EXTERNAL SOURCES:
   ReactNativeDependencies:
     :podspec: "../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
   RNHotswap:
-    :path: "../node_modules/react-native-hotswap"
+    :path: "../node_modules/@salve-software/react-native-hotswap"
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
@@ -2238,6 +2238,6 @@ SPEC CHECKSUMS:
   RNHotswap: 49976a101d8ffd45dfc59850e72e0173eee8823c
   Yoga: fe50ab299e578f397fef753cf309c6703a4db29b
 
-PODFILE CHECKSUM: 78d2759e0821af69bd1276d651c8ec4c6fc893f5
+PODFILE CHECKSUM: 0e0d71447e5f9cb5aab154c94c5b183747487d2d
 
 COCOAPODS: 1.16.2
