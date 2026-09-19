@@ -5,7 +5,8 @@ import { Agent } from '../agent/index.js';
 import {
   buildGeneration,
   buildIosGeneration,
-  readManifest,
+  readNativeBindings,
+  readPackages,
   sendGeneration,
   sendIosGeneration,
 } from './library/index.js';
@@ -51,18 +52,17 @@ export class Generation {
   private forAndroid(): Promise<number> {
     forwardPort(this.config.port);
 
-    const manifest = readManifest(this.config.watch);
-    if (manifest.packages.length === 0) {
+    const packages = readPackages(this.config.watch);
+    if (packages.length === 0) {
       throw new Error('no React package here to rebuild the module from');
     }
 
-    return new Agent(this.config.port).send(
-      sendGeneration(buildGeneration(this.config), manifest),
-    );
+    const dexes = buildGeneration(this.config);
+    const shared = readNativeBindings(this.config.classes);
+
+    return new Agent(this.config.port).send(sendGeneration(dexes, { packages, shared }));
   }
 
-  // Every generation is its own Swift module, so the name has to differ each time or the
-  // types would collide instead of standing beside each other.
   private forIos(): Promise<number> {
     const moduleName = `Hotswap${this.config.scheme}Gen${++this.published}`;
     const dylib = buildIosGeneration(this.config, moduleName);

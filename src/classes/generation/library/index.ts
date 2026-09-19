@@ -1,10 +1,11 @@
 export { buildGeneration } from './build-generation.js';
 export { buildIosGeneration } from './build-ios-generation.js';
 export { extractSwiftCommand } from './extract-swift-command.js';
+export { findReactPackage } from './find-react-package.js';
 export { generateFactory } from './generate-factory.js';
 export { generationArgs } from './generation-args.js';
-export { findNativeClass } from './find-native-classes.js';
-export { findReactPackage } from './find-react-package.js';
-export { readManifest } from './read-manifest.js';
+export { nativeBinding } from './native-binding.js';
+export { readNativeBindings } from './read-native-bindings.js';
+export { readPackages } from './read-packages.js';
 export { sendGeneration } from './send-generation.js';
 export { sendIosGeneration } from './send-ios-generation.js';
