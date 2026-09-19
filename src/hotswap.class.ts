@@ -11,13 +11,16 @@ import {
   Notice,
   Watcher,
 } from './classes/index.js';
-import { HEADERS } from './constants/index.js';
+import { HEADERS, IDENTITY, IOS_IDENTITY } from './constants/index.js';
 import {
   checkSetup,
   findDependents,
   findSources,
   forwardPort,
   platformsFor,
+  reason,
+  readSwiftCommand,
+  warmGradle,
 } from './library/index.js';
 
 export class Hotswap {
@@ -57,18 +60,37 @@ export class Hotswap {
 
     console.log(`hotswap  watching ${basename(this.config.root)}: ${watched}`);
 
-    new Watcher(this.config.watch, (path) => this.swap(path)).start();
+    new Watcher(this.config.watch, (path) => this.swap(path)).start(() => this.warm());
   }
 
   async check(): Promise<string[]> {
     forwardPort(this.config.port);
 
     const [android, ios] = await Promise.all([
-      new Agent(this.config.port).listening(),
-      new Agent(this.config.iosPort).listening(),
+      answered(this.config.port, IDENTITY),
+      answered(this.config.iosPort, IOS_IDENTITY),
     ]);
 
     return checkSetup(this.config, { android, ios });
+  }
+
+  private async warm(): Promise<void> {
+    console.log('hotswap  warming the build so the first save does not pay for it');
+
+    const settled = await Promise.allSettled([
+      Promise.resolve().then(() => warmGradle(this.config)),
+      Promise.resolve().then(() => this.captureSwiftCommand()),
+    ]);
+
+    for (const result of settled) {
+      if (result.status === 'rejected') {
+        console.log(`  ⚠️  did not warm up: ${reason(result.reason)}`);
+      }
+    }
+  }
+
+  private captureSwiftCommand(): void {
+    if (this.config.workspace && this.config.scheme) readSwiftCommand(this.config);
   }
 
   private async swapDependents(header: string): Promise<boolean> {
@@ -133,4 +155,14 @@ export class Hotswap {
 
     return platforms.filter((_, at) => listening[at]);
   }
+}
+
+async function answered(
+  port: number,
+  kind: number,
+): Promise<{ listening: boolean; app: string | undefined }> {
+  const agent = new Agent(port);
+  const app = await agent.identify(kind);
+
+  return { listening: app !== undefined || (await agent.listening()), app };
 }

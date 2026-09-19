@@ -7,7 +7,6 @@ function withHotswap(config, options = {}) {
   if (started || process.env.HOTSWAP === '0') return config;
   started = true;
 
-  // A checkout used straight from git has no lib yet, which reads as a broken tool.
   if (!existsSync(join(__dirname, 'lib'))) {
     console.log(
       'hotswap  off: not built yet, run `bun run build` in @salve-software/react-native-hotswap',

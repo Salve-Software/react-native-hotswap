@@ -10,7 +10,6 @@ export function patchFor(path: string, source: string): Patch | undefined {
   return replacement ? { ...SWIFT_PATCH, contents: replacement } : undefined;
 }
 
-// A quoted include resolves beside the file that wrote it, so the path has to be absolute.
 function include(path: string): string {
   return `#include "${path}"\n`;
 }

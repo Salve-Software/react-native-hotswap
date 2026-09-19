@@ -25,6 +25,29 @@ export class Agent {
     });
   }
 
+  identify(kind: number): Promise<string | undefined> {
+    return new Promise((resolve) => {
+      const socket = connect({ host: '127.0.0.1', port: this.port });
+      const done = (name?: string): void => {
+        socket.destroy();
+        resolve(name);
+      };
+
+      socket.setTimeout(REPLY);
+      socket.on('timeout', () => done());
+      socket.on('error', () => done());
+      socket.on('close', () => resolve(undefined));
+
+      socket.on('connect', () => socket.write(Buffer.from([kind])));
+
+      socket.once('data', (reply: Buffer) => {
+        const length = reply.length < 4 ? 0 : reply.readUInt32BE(0);
+
+        done(length === 0 ? undefined : reply.toString('utf8', 4, 4 + length));
+      });
+    });
+  }
+
   listening(): Promise<boolean> {
     return new Promise((resolve) => {
       const socket = connect({ host: '127.0.0.1', port: this.port });

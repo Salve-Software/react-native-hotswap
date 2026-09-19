@@ -24,6 +24,7 @@ constexpr unsigned char kClasses = 0;
 constexpr unsigned char kNative = 1;
 constexpr unsigned char kGeneration = 2;
 constexpr unsigned char kNotice = 3;
+constexpr unsigned char kIdentity = 4;
 constexpr const char* kStructuralRedefine =
     "com.android.art.class.structurally_redefine_classes";
 
@@ -65,7 +66,6 @@ class LoadedClasses {
     if (classes_ != nullptr) gJvmti->Deallocate(reinterpret_cast<unsigned char*>(classes_));
   }
 
-  // Every copy: a generation loads the same class again, under its own loader.
   std::vector<jclass> find(const std::string& className) const {
     const std::string wanted = "L" + className + ";";
     std::vector<jclass> found;
@@ -99,9 +99,7 @@ jvmtiError redefine(const std::vector<Definition>& definitions) {
 
   jvmtiError result = JVMTI_ERROR_INVALID_CLASS;
 
-  // Releasing LoadedClasses' local references after detaching aborts the runtime.
   {
-    // GetLoadedClasses walks every class the runtime holds, so the batch takes one snapshot.
     const LoadedClasses loaded(env);
 
     std::vector<jvmtiClassDefinition> classes;
@@ -110,7 +108,6 @@ jvmtiError redefine(const std::vector<Definition>& definitions) {
     for (const Definition& definition : definitions) {
       const std::vector<jclass> targets = loaded.find(definition.className);
 
-      // A class not reached yet will load from the dex on disk, so skipping beats failing.
       if (targets.empty()) {
         LOGI("skipping %s, not loaded yet", definition.className.c_str());
         continue;
@@ -280,6 +277,26 @@ unsigned char showNotice(const std::string& title, const std::string& detail) {
   return reply;
 }
 
+std::string packageFrom(const std::string& filesDir) {
+  const size_t end = filesDir.find_last_of('/');
+  if (end == std::string::npos || end == 0) return "";
+
+  const size_t start = filesDir.find_last_of('/', end - 1);
+
+  return start == std::string::npos ? "" : filesDir.substr(start + 1, end - start - 1);
+}
+
+bool serveIdentity(int client, const std::string& filesDir) {
+  const std::string name = packageFrom(filesDir);
+  uint32_t length = htonl(static_cast<uint32_t>(name.size()));
+
+  std::vector<unsigned char> out(sizeof(length) + name.size());
+  std::memcpy(out.data(), &length, sizeof(length));
+  std::memcpy(out.data() + sizeof(length), name.data(), name.size());
+
+  return send(client, out.data(), out.size(), 0) == static_cast<ssize_t>(out.size());
+}
+
 bool serveNotice(int client, unsigned char& reply) {
   std::string title;
   if (!readString(client, title)) return false;
@@ -345,7 +362,12 @@ void serveConnection(int client, const std::string& filesDir) {
   while (true) {
     unsigned char kind = 0;
     if (!readExactly(client, &kind, sizeof(kind))) return;
-    if (kind > kNotice) return;
+    if (kind > kIdentity) return;
+
+    if (kind == kIdentity) {
+      if (!serveIdentity(client, filesDir)) return;
+      continue;
+    }
 
     unsigned char reply = 0;
     bool served = false;
@@ -386,7 +408,6 @@ void listenForever(int port, std::string filesDir) {
     const int client = accept(server, nullptr, nullptr);
 
     if (client < 0) {
-      // Anything but EINTR means the socket is gone, and looping would spin a core.
       if (errno == EINTR || errno == ECONNABORTED) continue;
 
       LOGE("accept failed: %s", std::strerror(errno));

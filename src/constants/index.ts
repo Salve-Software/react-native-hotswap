@@ -3,8 +3,10 @@ export { ANDROID_PORT, IOS_PORT } from './ports.js';
 export {
   CLASSES,
   GENERATION,
+  IDENTITY,
   IMAGE,
   IOS_GENERATION,
+  IOS_IDENTITY,
   IOS_NOTICE,
   NATIVE_LIBRARY,
   NOTICE,

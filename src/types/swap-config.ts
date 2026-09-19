@@ -4,6 +4,7 @@ export interface SwapConfig {
   iosPort: number;
   minApi: number;
   buildTools: string | undefined;
+  applicationId: string | undefined;
   abi: string;
   watch: string[];
   project: string;

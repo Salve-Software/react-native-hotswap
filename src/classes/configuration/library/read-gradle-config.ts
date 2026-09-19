@@ -5,6 +5,7 @@ import { packageRoot } from '../../../library/package-root.js';
 export function readGradleConfig(project: string): {
   minApi: number | undefined;
   buildTools: string | undefined;
+  applicationId: string | undefined;
 } {
   const script = join(packageRoot(), 'gradle/hotswap-config.gradle');
 
@@ -17,6 +18,7 @@ export function readGradleConfig(project: string): {
   return {
     minApi: Number(match(output, 'HOTSWAP_MIN_SDK')) || undefined,
     buildTools: match(output, 'HOTSWAP_BUILD_TOOLS'),
+    applicationId: match(output, 'HOTSWAP_APPLICATION_ID'),
   };
 }
 

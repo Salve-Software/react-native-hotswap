@@ -26,7 +26,6 @@ ByName definedBy(const HotswapImage &image) {
   return found;
 }
 
-// A patched slot no longer holds the address the symbol table reports.
 ByName installed;
 
 Addresses supersededBy(const ByName &fresh, const mach_header_64 *replacement) {
@@ -84,7 +83,6 @@ size_t HotswapPatchPointers(const char *path) {
   HotswapImage replacement{};
   if (!HotswapFindImage(path, replacement)) return 0;
 
-  // A vtable holds the address directly and names no symbol, so rebinding never sees it.
   const ByName fresh = definedBy(replacement);
   const Addresses superseded = supersededBy(fresh, replacement.header);
 

@@ -1,7 +1,15 @@
 import type { Outcome, SwapConfig, Swapper } from '../../../types/index.js';
 import { relative } from 'node:path';
+import { PATCHES } from '../../../constants/index.js';
+import { findSources, readBuildCommands, reason } from '../../../library/index.js';
 import { Agent } from '../../agent/index.js';
-import { buildDylib, sendImage } from './library/index.js';
+import {
+  buildDylib,
+  builtSources,
+  filesTheAppLacks,
+  findSwiftCallers,
+  sendImage,
+} from './library/index.js';
 
 export class IosSwapper implements Swapper {
   private readonly agent: Agent;
@@ -14,19 +22,25 @@ export class IosSwapper implements Swapper {
     const started = Date.now();
     const name = relative(this.config.root, path);
 
+    if (this.isNewHere(path)) return this.swapCallers(path);
+
     let dylib: string;
     try {
       dylib = buildDylib(path, this.config);
     } catch (cause) {
-      // A replacement only compiles against methods the running app already has, so a patch
-      // that will not build is how a new method or a new file announces itself here.
-      console.log(`  ↻ ${name}  ${(cause as Error).message.split('\n')[0]}`);
+      console.log(`  ↻ ${name}  ${reason(cause)}`);
 
       return 'needs-generation';
     }
 
     try {
-      const error = await this.agent.send(sendImage(dylib));
+      let error = await this.agent.send(sendImage(dylib));
+
+      if (error !== 0 && this.lacksFiles()) {
+        dylib = buildDylib(path, { ...this.config, carryNew: true });
+        error = await this.agent.send(sendImage(dylib));
+      }
+
       const took = Date.now() - started;
 
       if (error === 0) {
@@ -35,16 +49,60 @@ export class IosSwapper implements Swapper {
         return 'swapped';
       }
 
-      // A patch is compiled against the source as it is now, so a method added since the app
-      // was installed compiles here and then has nothing to attach to there — it either
-      // refuses to load or replaces nothing. Either way the app is the one that knows.
       console.log(`  ↻ ${name}  the running app has nothing to replace`);
 
       return 'needs-generation';
     } catch (cause) {
-      console.log(`  ❌ ${name}  ${(cause as Error).message.split('\n')[0]}`);
+      console.log(`  ❌ ${name}  ${reason(cause)}`);
 
       return 'failed';
+    }
+  }
+
+  private async swapCallers(path: string): Promise<Outcome> {
+    const name = relative(this.config.root, path);
+    const callers = findSwiftCallers(path, this.loadedSources());
+
+    if (callers.length === 0) {
+      console.log(`  ↷ ${name}  new here; it swaps once something loaded calls it`);
+
+      return 'nothing-to-swap';
+    }
+
+    console.log(`  ↳ ${name}  called by ${callers.length}`);
+
+    let swapped = false;
+    for (const caller of callers) {
+      if ((await this.swap(caller)) === 'swapped') swapped = true;
+    }
+
+    return swapped ? 'swapped' : 'failed';
+  }
+
+  private loadedSources(): string[] {
+    const lacking = new Set(this.lacking());
+
+    return findSources(this.config.watch, ['.swift']).filter(
+      (source) =>
+        !lacking.has(source) && !PATCHES.some(({ file }) => source.endsWith(file)),
+    );
+  }
+
+  private isNewHere(path: string): boolean {
+    return path.endsWith('.swift') && this.lacking().includes(path);
+  }
+
+  private lacksFiles(): boolean {
+    return this.lacking().length > 0;
+  }
+
+  private lacking(): string[] {
+    try {
+      const built = builtSources(readBuildCommands(this.config));
+
+      return filesTheAppLacks(built, findSources(this.config.watch, ['.swift']));
+    } catch {
+      return [];
     }
   }
 }

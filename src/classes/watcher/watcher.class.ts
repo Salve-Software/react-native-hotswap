@@ -9,7 +9,9 @@ export class Watcher {
     private readonly onChange: (path: string) => Promise<unknown>,
   ) {}
 
-  start(): void {
+  start(first?: () => Promise<unknown>): void {
+    if (first) void this.queue(first);
+
     watchSources(this.directories, (path) => {
       void this.queue(() => this.onChange(path));
     });

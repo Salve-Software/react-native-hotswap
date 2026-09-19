@@ -53,7 +53,6 @@ static uint8_t loadImage(NSString *path) {
         path.lastPathComponent,
         replaced ? @"swift replacements applied" : @"no swift replacements", rebound, patched);
 
-  // Loading without changing anything leaves the old code running, silently.
   return (replaced || rebound > 0 || patched > 0) ? 0 : 2;
 }
 
@@ -61,7 +60,19 @@ static void serveConnection(int client) {
   while (YES) {
     uint8_t kind = 0;
     if (!readExactly(client, &kind, sizeof(kind))) return;
-    if (kind > 2) return;
+    if (kind > 3) return;
+
+    if (kind == 3) {
+      NSString *name = NSBundle.mainBundle.bundleIdentifier ?: @"";
+      NSData *bytes = [name dataUsingEncoding:NSUTF8StringEncoding];
+      uint32_t length = htonl((uint32_t)bytes.length);
+
+      NSMutableData *out = [NSMutableData dataWithBytes:&length length:sizeof(length)];
+      [out appendData:bytes];
+      if (send(client, out.bytes, out.length, 0) != (ssize_t)out.length) return;
+
+      continue;
+    }
 
     NSString *payload = readFramed(client);
     if (payload == nil) return;

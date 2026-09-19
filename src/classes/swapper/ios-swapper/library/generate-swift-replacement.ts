@@ -27,7 +27,6 @@ function toExtension({ name, body }: Declaration): string | undefined {
   return [`extension ${name} {`, methods.join('\n\n'), '}'].join('\n');
 }
 
-// A nested type goes with its parent's body: replacing it needs the qualified name.
 function findDeclarations(source: string): Declaration[] {
   const found: Declaration[] = [];
   const opener =
@@ -68,14 +67,12 @@ function findMethods(source: string): Method[] {
       body: read.body,
     });
 
-    // A nested function is local and cannot be replaced, so the scan resumes past the body.
     opener.lastIndex = read.end;
   }
 
   return found;
 }
 
-// A brace inside a string or a comment would otherwise close the body early.
 function readBody(
   source: string,
   openBrace: number,
@@ -126,7 +123,6 @@ function skipNonCode(source: string, at: number): number {
   return source.length;
 }
 
-// Swift matches a replacement by argument labels, not by parameter names.
 function toReplacement({ name, parameters, returns, body }: Method): string {
   const labels = parameters
     .split(',')

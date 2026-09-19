@@ -16,7 +16,6 @@ export function findUnder(from: string, tail: string[]): string[] {
     found.push(...findUnder(at, tail));
   }
 
-  // The tools configuration beside Debug is for the IDE and carries different flags.
   return found.sort((left, right) => debugFirst(left) - debugFirst(right));
 }
 

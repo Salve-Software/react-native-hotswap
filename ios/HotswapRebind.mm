@@ -17,7 +17,6 @@ size_t rebindSection(const section_64 *section,
   const size_t count = section->size / sizeof(void *);
   size_t rebound = 0;
 
-  // __DATA_CONST is read-only once dyld has applied its fixups.
   if (!HotswapMakeWritable(slots, section->size)) return 0;
 
   for (size_t i = 0; i < count; i++) {
@@ -30,7 +29,6 @@ size_t rebindSection(const section_64 *section,
     void *replacement = dlsym(replacementImage, name + 1);
     if (replacement == nullptr || replacement == slots[i]) continue;
 
-    // dlsym walks dependencies too, so a hit may live in Foundation or the Swift runtime.
     Dl_info info{};
     if (dladdr(replacement, &info) == 0 || info.dli_fbase != replacementBase) continue;
 
@@ -76,14 +74,10 @@ bool HotswapHasReplacements(const char *path) {
       auto *section = (const section_64 *)((uintptr_t)segment + sizeof(segment_command_64));
 
       for (uint32_t j = 0; j < segment->nsects; j++, section++) {
-        // sectname is a fixed 16 bytes and "__swift5_replace" fills it exactly.
         if (strncmp(section->sectname, "__swift5_replace", sizeof(section->sectname)) == 0) {
           return true;
         }
 
-        // An extension of an @objc class compiles to a category, and the runtime attaches it
-        // on load. That is the replacement for most React Native modules, and looking only
-        // for the Swift section reported those as having changed nothing.
         if (strncmp(section->sectname, "__objc_catlist", sizeof(section->sectname)) == 0) {
           return true;
         }

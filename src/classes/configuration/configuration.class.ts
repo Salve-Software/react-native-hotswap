@@ -41,6 +41,7 @@ export class Configuration {
       iosPort: IOS_PORT,
       minApi: 24,
       buildTools: undefined,
+      applicationId: undefined,
       abi: readDeviceAbi(),
       watch: app
         ? [join(root, 'android/app/src/main/java')]
@@ -80,10 +81,12 @@ export class Configuration {
 
   private static fromGradle(project: string): Partial<SwapConfig> {
     try {
-      const { minApi, buildTools } = readGradleConfig(project);
+      const { minApi, buildTools, applicationId } = readGradleConfig(project);
 
       return Object.fromEntries(
-        Object.entries({ minApi, buildTools }).filter(([, value]) => value !== undefined),
+        Object.entries({ minApi, buildTools, applicationId }).filter(
+          ([, value]) => value !== undefined,
+        ),
       );
     } catch {
       return {};
