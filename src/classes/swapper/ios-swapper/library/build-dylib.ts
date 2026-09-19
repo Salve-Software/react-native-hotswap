@@ -4,7 +4,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { PATCHES } from '../../../../constants/index.js';
-import { forgetSwiftCommand, readSwiftCommand } from '../../../../library/index.js';
+import { forgetBuildCommands, readBuildCommands } from '../../../../library/index.js';
+import { nativeArgs } from './native-args.js';
 import { patchArgs, sourceListPath } from './patch-args.js';
 import { patchFor } from './patch-for.js';
 
@@ -39,40 +40,61 @@ export function buildDylib(
 // The captured invocation with a module cache that survives does the same work in a fifth of
 // a second, and xcodebuild stays as the answer for when the capture no longer fits.
 function replayed(where: Where, patch: Patch): string | undefined {
-  if (!patch.file.endsWith('.swift')) return undefined;
-
   try {
-    const captured = readSwiftCommand(where);
-    const list = sourceListPath(captured);
-    if (!list) return undefined;
-
+    const captured = readBuildCommands(where);
+    const swift = patch.file.endsWith('.swift');
     const out = mkdtempSync(join(tmpdir(), 'hotswap-'));
     const cache = join(tmpdir(), `hotswap-modules-${where.scheme}`);
     mkdirSync(cache, { recursive: true });
 
-    const sources = readFileSync(list, 'utf8')
-      .split('\n')
-      .map((line) => line.trim().replace(/^"|"$/g, ''))
-      .filter(Boolean);
+    const args = swift
+      ? swiftReplay(captured.swift, { out, cache })
+      : nativeReplay(captured.native, { object: join(out, 'patch.o'), cache });
+    if (!args) return undefined;
 
-    const map = join(out, 'output-file-map.json');
-    writeFileSync(map, JSON.stringify(objectMap(sources, out)));
-
-    const args = patchArgs(captured, { map, cache });
     execFileSync(args[0] as string, args.slice(1), {
       cwd: join(dirname(where.workspace as string), 'Pods'),
       stdio: 'pipe',
       maxBuffer: 64 * 1024 * 1024,
     });
 
-    const object = join(out, patch.file.replace(/\.\w+$/, '.o'));
+    const object = swift
+      ? join(out, patch.file.replace(/\.\w+$/, '.o'))
+      : join(out, 'patch.o');
 
     return existsSync(object) ? object : undefined;
   } catch {
-    forgetSwiftCommand(where.scheme as string);
+    forgetBuildCommands(where.scheme as string);
 
     return undefined;
   }
+}
+
+function swiftReplay(
+  captured: string[] | undefined,
+  { out, cache }: { out: string; cache: string },
+): string[] | undefined {
+  if (!captured) return undefined;
+
+  const list = sourceListPath(captured);
+  if (!list) return undefined;
+
+  const sources = readFileSync(list, 'utf8')
+    .split('\n')
+    .map((line) => line.trim().replace(/^"|"$/g, ''))
+    .filter(Boolean);
+
+  const map = join(out, 'output-file-map.json');
+  writeFileSync(map, JSON.stringify(objectMap(sources, out)));
+
+  return patchArgs(captured, { map, cache });
+}
+
+function nativeReplay(
+  captured: string[] | undefined,
+  { object, cache }: { object: string; cache: string },
+): string[] | undefined {
+  return captured ? nativeArgs(captured, { object, cache }) : undefined;
 }
 
 function objectMap(sources: string[], out: string): Record<string, unknown> {

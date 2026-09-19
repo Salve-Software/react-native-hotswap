@@ -1,5 +1,6 @@
 export { buildGeneration } from './build-generation.js';
 export { buildIosGeneration } from './build-ios-generation.js';
+export { extractClangCommand } from './extract-clang-command.js';
 export { extractSwiftCommand } from './extract-swift-command.js';
 export { findReactPackage } from './find-react-package.js';
 export { generateFactory } from './generate-factory.js';

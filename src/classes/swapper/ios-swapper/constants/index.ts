@@ -23,3 +23,14 @@ export const DROPPED_FLAGS = [
   '-incremental',
   '-index-system-modules',
 ];
+
+export const NATIVE_DROPPED_WITH_VALUE = [
+  '-o',
+  '-MF',
+  '-MT',
+  '--serialize-diagnostics',
+  '-serialize-diagnostics',
+  '-index-store-path',
+];
+
+export const NATIVE_DROPPED_FLAGS = ['-MMD', '-MD'];
